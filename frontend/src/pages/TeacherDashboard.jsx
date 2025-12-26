@@ -1,0 +1,518 @@
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import RealTimeEngagement from "./RealTimeEngagement";
+import SessionAnalytics from "../components/SessionAnalytics";
+import "../styles/global.css";
+import { useNavigate } from "react-router-dom";
+
+export default function TeacherDashboard() {
+  const navigate = useNavigate();
+  const [sessionId, setSessionId] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [ending, setEnding] = useState(false);
+  const [ended, setEnded] = useState(false);
+  const [error, setError] = useState("");
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [points, setPoints] = useState([]);
+  const [sessionInfo, setSessionInfo] = useState(null);
+  const [elapsedTime, setElapsedTime] = useState("0:00");
+  const [attendanceCount, setAttendanceCount] = useState(0);
+  // 🔒 UPDATE A — Teacher authority state
+const [roomLocked, setRoomLocked] = useState(false);
+const [studentsMuted, setStudentsMuted] = useState(false);
+const [camerasDisabled, setCamerasDisabled] = useState(false);
+
+  // ✅ ISSUE #1 FIX: Track session creation state
+  const [sessionCreated, setSessionCreated] = useState(false);
+
+  // ✅ Session timer
+  useEffect(() => {
+    if (!sessionId || ended) return;
+
+    const interval = setInterval(() => {
+      if (sessionInfo?.started_at) {
+        const startTime = new Date(sessionInfo.started_at).getTime();
+        const now = new Date().getTime();
+        const elapsed = Math.floor((now - startTime) / 1000);
+
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        setElapsedTime(`${minutes}:${seconds.toString().padStart(2, "0")}`);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [sessionId, ended, sessionInfo]);
+
+  // ✅ Auto-hide errors after 5 seconds
+  useEffect(() => {
+    if (error) {
+      setErrorVisible(true);
+      const timer = setTimeout(() => setErrorVisible(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+  async function startSession() {
+    setError("");
+    setLoading(true);
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        "http://127.0.0.1:8000/api/engagement/sessions",
+        { title: "Live Class Session", subject: "General" },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      console.log("🎓 Session started:", res.data.id);
+      setSessionId(res.data.id);
+      setSessionInfo(res.data);
+      setSessionCreated(true); // ✅ ISSUE #1: Mark session as created
+      setEnded(false);
+      setElapsedTime("0:00");
+    } catch (err) {
+      console.error("❌ Start session error:", err);
+      setError(err?.response?.data?.detail || "Failed to start session");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ✅ ISSUE #3 FIX: Properly end session with better error handling
+  async function endSession() {
+    if (!sessionId) {
+      setError("❌ No active session to end");
+      return;
+    }
+
+    setEnding(true);
+    setError("");
+
+    try {
+      const token = localStorage.getItem("token");
+      
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      console.log("🛑 Sending end session request for:", sessionId);
+
+      const res = await axios.post(
+        `http://127.0.0.1:8000/api/engagement/sessions/${sessionId}/end`,
+        {},
+        {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          timeout: 5000,
+        }
+      );
+
+      console.log("✅ Session end response:", res.data);
+      setEnded(true);
+      setError("");
+
+      // ✅ CRITICAL FIX: Redirect to report page after session ends
+      console.log("📊 Redirecting to report page for session:", sessionId);
+      
+      // Wait 1 second so UI updates are visible to user
+      setTimeout(() => {
+        navigate(`/teacher/sessions/${sessionId}/report`, { replace: true });
+      }, 1000);
+
+    } catch (err) {
+      console.error("❌ End session error:", err);
+      
+      let errorMsg = "Failed to end session";
+      if (err.response?.status === 403) {
+        errorMsg = "Only teachers can end sessions";
+      } else if (err.response?.status === 404) {
+        errorMsg = "Session not found";
+      } else if (err.code === "ECONNABORTED") {
+        errorMsg = "Request timeout - session may still be ended";
+        setEnded(true);
+        // Still try to redirect even on timeout
+        setTimeout(() => {
+          navigate(`/teacher/sessions/${sessionId}/report`, { replace: true });
+        }, 1000);
+      } else if (err.response?.data?.detail) {
+        errorMsg = err.response.data.detail;
+      }
+      
+      setError(errorMsg);
+    } finally {
+      setEnding(false);
+    }
+  }
+// 🔒 Lock / Unlock room
+async function toggleRoomLock() {
+  const token = localStorage.getItem("token");
+  if (!token || !sessionId) return;
+
+  try {
+    const url = roomLocked
+      ? `/api/video/sessions/${sessionId}/unlock`
+      : `/api/video/sessions/${sessionId}/lock`;
+
+    await axios.post(`http://127.0.0.1:8000${url}`, {}, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    setRoomLocked(!roomLocked);
+  } catch (err) {
+    setError("Failed to toggle room lock");
+  }
+}
+
+// 🔇 Mute all students
+async function muteStudents() {
+  const token = localStorage.getItem("token");
+  if (!token || !sessionId) return;
+
+  try {
+    await axios.post(
+      `http://127.0.0.1:8000/api/video/sessions/${sessionId}/mute-all`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    setStudentsMuted(true);
+  } catch {
+    setError("Failed to mute students");
+  }
+}
+
+// 📷 Disable student cameras
+async function disableStudentCameras() {
+  const token = localStorage.getItem("token");
+  if (!token || !sessionId) return;
+
+  try {
+    await axios.post(
+      `http://127.0.0.1:8000/api/video/sessions/${sessionId}/disable-cameras`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    setCamerasDisabled(true);
+  } catch {
+    setError("Failed to disable cameras");
+  }
+}
+
+  // ✅ ISSUE #2 FIX: Validate before navigating to video
+  function handleVideoClassClick() {
+    if (!sessionCreated || !sessionId) {
+      setError("❌ Please create an engagement session first!");
+      return;
+    }
+
+    if (ended) {
+      setError("❌ Session has ended. Start a new session.");
+      return;
+    }
+
+    console.log("🎥 Navigating to video class for session:", sessionId);
+    navigate(`/teacher/video/${sessionId}`);
+  }
+
+  // ✅ Heartbeat to detect if session ends remotely
+  useEffect(() => {
+    if (!sessionId || ended) return;
+
+    const token = localStorage.getItem("token");
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(
+          `http://127.0.0.1:8000/api/engagement/sessions/${sessionId}/heartbeat`,
+          {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        const data = await res.json();
+        if (data.status === "ended") {
+          console.log("📡 Heartbeat detected session ended");
+          setEnded(true);
+          setSessionCreated(false);
+          clearInterval(interval);
+        }
+      } catch (err) {
+        console.warn("⚠️ Heartbeat failed:", err);
+      }
+    }, 10000); // Check every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [sessionId, ended]);
+// ✅ UPDATE D — Poll live attendance
+useEffect(() => {
+  if (!sessionId || ended) return;
+
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  const interval = setInterval(async () => {
+    try {
+      const res = await axios.get(
+        `http://127.0.0.1:8000/api/attendance/count/${sessionId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setAttendanceCount(res.data.count);
+    } catch (err) {
+      console.warn("Attendance poll failed", err);
+    }
+  }, 5000); // every 5s
+
+  return () => clearInterval(interval);
+}, [sessionId, ended]);
+
+  return (
+    <div
+      style={{
+        padding: "20px",
+        maxWidth: "1200px",
+        margin: "0 auto",
+        background: "#0f172a",
+        minHeight: "100vh",
+        color: "#e2e8f0",
+      }}
+    >
+      <h1 style={{ marginBottom: "30px", color: "#f1f5f9" }}>Teacher Dashboard</h1>
+
+      {/* ✅ Navigation Buttons */}
+      <div style={{ marginBottom: "20px", display: "flex", gap: "10px" }}>
+        {sessionCreated && !ended && (
+          <button
+            onClick={() => navigate("/teacher/sessions")}
+            className="btn btn-primary"
+          >
+            📚 View Session History
+          </button>
+        )}
+
+        {/* ✅ ISSUE #1 FIX: Only show video button AFTER session created */}
+        {sessionCreated && !ended && (
+          <button
+            onClick={handleVideoClassClick}
+            className="btn btn-primary"
+            style={{ marginLeft: "10px", background: "#059669" }}
+          >
+            🎥 Start Video Class
+          </button>
+        )}
+      </div>
+
+      {/* ✅ Show session creation button only when no active session */}
+      {!sessionId && (
+        <div style={{ marginTop: "40px" }}>
+          <button
+            onClick={startSession}
+            disabled={loading}
+            className="btn btn-primary"
+            style={{ fontSize: "18px", padding: "14px 32px" }}
+          >
+            {loading && <span className="spinner"></span>}
+            {loading ? "Starting..." : "🚀 Start Engagement Session"}
+          </button>
+        </div>
+      )}
+
+      {/* ✅ Session active panel */}
+      {sessionId && (
+        <div>
+          {/* Session Info Panel */}
+          <div
+            style={{
+              background: ended ? "#1e293b" : "#1e3a8a",
+              padding: "16px",
+              borderRadius: "8px",
+              marginBottom: "20px",
+              border: ended ? "2px solid #10b981" : "2px solid #3b82f6",
+              transition: "all 0.3s ease",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "12px",
+              }}
+            >
+              <div>
+                <p style={{ margin: "0 0 8px 0", color: "#e2e8f0" }}>
+                  <strong>Session ID:</strong> {sessionId}
+                </p>
+               <div className="session-timer" style={{ color: "#cbd5e1" }}>
+  <div style={{ marginTop: "6px", color: "#e2e8f0" }}>
+    👥 Live Attendance:{" "}
+    <strong style={{ color: "#22c55e" }}>
+      {attendanceCount}
+    </strong>
+  </div>
+
+  <div style={{ marginTop: "4px" }}>
+    ⏱️ Elapsed:{" "}
+    <span
+      className="session-timer-value"
+      style={{ color: "#60a5fa" }}
+    >
+      {elapsedTime}
+    </span>
+  </div>
+</div>
+</div>
+
+              {/* Status Badge */}
+              <div
+                className={`status-badge ${ended ? "status-ended" : "status-live"}`}
+                style={{
+                  background: ended ? "#1f2937" : "#0ea5e9",
+                  borderColor: ended ? "#6b7280" : "#0ea5e9",
+                  color: ended ? "#9ca3af" : "#fff",
+                  padding: "8px 16px",
+                  borderRadius: "6px",
+                  fontWeight: "bold",
+                }}
+              >
+                {ended ? "✅ Ended" : "🔴 Live"}
+              </div>
+            </div>
+
+            {/* Share Code */}
+            {sessionInfo?.share_code && (
+              <p style={{ margin: "0 0 12px 0", color: "#cbd5e1" }}>
+                <strong>Share Code:</strong>
+                <span
+                  style={{
+                    display: "inline-block",
+                    marginLeft: "8px",
+                    padding: "4px 12px",
+                    background: "#1f2937",
+                    border: "2px solid #3b82f6",
+                    borderRadius: "4px",
+                    fontSize: "16px",
+                    fontFamily: "monospace",
+                    fontWeight: "bold",
+                    color: "#60a5fa",
+                  }}
+                >
+                  {sessionInfo.share_code}
+                </span>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(sessionInfo.share_code);
+                    alert("✅ Share code copied!");
+                  }}
+                  className="btn btn-secondary"
+                  style={{
+                    marginLeft: "8px",
+                    background: "#1f2937",
+                    borderColor: "#3b82f6",
+                    color: "#60a5fa",
+                  }}
+                >
+                  📋 Copy
+                </button>
+              </p>
+            )}
+{/* 🔒 Teacher Controls */}
+{!ended && (
+  <div style={{ marginBottom: "12px", display: "flex", gap: "10px" }}>
+    <button
+      onClick={toggleRoomLock}
+      className="btn btn-secondary"
+    >
+      {roomLocked ? "🔓 Unlock Class" : "🔒 Lock Class"}
+    </button>
+
+    <button
+      onClick={muteStudents}
+      disabled={studentsMuted}
+      className="btn btn-secondary"
+    >
+      🔇 Mute Students
+    </button>
+
+    <button
+      onClick={disableStudentCameras}
+      disabled={camerasDisabled}
+      className="btn btn-secondary"
+    >
+      📷 Disable Cameras
+    </button>
+  </div>
+)}
+
+            {/* ✅ ISSUE #3 FIX: End Session Button with better feedback */}
+            {!ended ? (
+              <button
+                onClick={endSession}
+                disabled={ending || !sessionId}
+                className="btn btn-danger"
+                style={{
+                  background: "#dc2626",
+                  cursor: ending ? "not-allowed" : "pointer",
+                  opacity: ending ? 0.6 : 1,
+                }}
+              >
+                {ending && <span className="spinner"></span>}
+                {ending ? "Ending..." : "🛑 End Session"}
+              </button>
+            ) : (
+              <div
+                style={{
+                  padding: "12px",
+                  background: "#064e3b",
+                  borderRadius: "6px",
+                  color: "#86efac",
+                  fontWeight: "600",
+                }}
+              >
+                ✅ Session Ended. Engagement data saved.
+              </div>
+            )}
+          </div>
+
+          {/* Real-time Graph */}
+          <RealTimeEngagement
+            sessionId={sessionId}
+            paused={ended}
+            onPointsUpdate={setPoints}
+            mode="live"
+          />
+
+          {/* Analytics */}
+          <SessionAnalytics points={points} sessionId={sessionId} />
+        </div>
+      )}
+
+      {/* ✅ Error Banner with Animation */}
+      {errorVisible && error && (
+        <div
+          style={{
+            marginTop: "20px",
+            padding: "14px 16px",
+            background: error.includes("✅") ? "#065f46" : "#7f1d1d",
+            border: error.includes("✅")
+              ? "1px solid #059669"
+              : "1px solid #991b1b",
+            borderLeft: error.includes("✅")
+              ? "4px solid #10b981"
+              : "4px solid #dc2626",
+            borderRadius: "6px",
+            color: error.includes("✅") ? "#86efac" : "#fca5a5",
+            animation: "slideIn 0.3s ease",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+          }}
+        >
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}

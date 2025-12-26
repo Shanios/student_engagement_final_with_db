@@ -1,0 +1,248 @@
+/* NOTES PAGE STYLES */
+
+.notes-page {
+  position: relative;
+  min-height: 100vh;
+  padding: 24px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  color: #e5ecff;
+}
+
+/* content wrapper */
+.notes-content {
+  position: relative;
+  max-width: 1100px;
+  margin: 0 auto;
+  z-index: 5;
+}
+
+/* header */
+.notes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.notes-header h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.notes-subtitle {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #9b9faf;
+}
+
+.notes-role-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(109, 123, 255, 0.15);
+}
+
+.notes-header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* buttons */
+.notes-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  background: #334577;
+  color: #7a7c86;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease;
+}
+
+.notes-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+}
+
+.notes-btn.primary {
+  background: linear-gradient(135deg, #4f7bff, #243b7b);
+}
+
+.notes-btn.secondary {
+  background: rgba(88, 120, 255, 0.2);
+}
+
+.notes-btn.ghost {
+  background: transparent;
+  border: 1px solid rgba(145, 164, 255, 0.5);
+}
+
+.notes-btn.danger {
+  background: linear-gradient(135deg, #ff5b6c, #b62335);
+}
+
+.notes-btn.full {
+  width: 100%;
+}
+
+.notes-btn.small {
+  font-size: 13px;
+  padding: 6px 10px;
+}
+
+/* alert */
+.notes-alert {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 109, 109, 0.1);
+  border: 1px solid rgba(255, 109, 109, 0.6);
+  color: #ffd0d0;
+}
+
+/* layout */
+.notes-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.85fr);
+  gap: 18px;
+}
+
+/* card */
+.notes-card {
+  background: rgba(12, 20, 45, 0.9);
+  border-radius: 14px;
+  padding: 16px 18px;
+  border: 1px solid rgba(129, 151, 255, 0.25);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+}
+
+.notes-card-title {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+
+/* form */
+.notes-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.notes-field label {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: #cdd7ff;
+}
+
+.notes-field input {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(155, 173, 255, 0.5);
+  padding: 8px 10px;
+  background: rgba(12, 20, 45, 0.9);
+  color: #e5ecff;
+  font-size: 14px;
+}
+
+.notes-field input::placeholder {
+  color: #7f8bb8;
+}
+
+.notes-field input:focus {
+  outline: none;
+  border-color: #6f8bff;
+  box-shadow: 0 0 0 1px rgba(104, 132, 255, 0.6);
+}
+
+/* right list */
+.notes-right {
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+}
+
+.notes-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.notes-count-badge {
+  font-size: 12px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(99, 132, 255, 0.25);
+}
+
+/* list */
+.notes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.notes-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(80, 99, 163, 0.4);
+}
+
+.notes-list-item:last-child {
+  border-bottom: none;
+}
+
+.notes-list-main {
+  max-width: 70%;
+}
+
+.notes-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notes-title {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.notes-meta {
+  margin-top: 3px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.notes-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(71, 90, 155, 0.5);
+}
+
+.notes-muted {
+  font-size: 14px;
+  color: #9aa6df;
+}
+
+/* responsive */
+@media (max-width: 900px) {
+  .notes-layout {
+    grid-template-columns: 1fr;
+  }
+  .notes-right {
+    max-height: none;
+  }
+  .notes-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}

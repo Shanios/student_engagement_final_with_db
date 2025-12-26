@@ -1,0 +1,58 @@
+# ======================
+# DATABASE / LOCAL DATA
+# ======================
+app.db
+*.db
+*.sqlite
+*.sqlite3
+
+# ======================
+# PYTHON
+# ======================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+venv/
+ENV/
+.env.local
+
+# ======================
+# NODE / FRONTEND
+# ======================
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# ======================
+# BACKEND ARTIFACTS
+# ======================
+backend/__pycache__/
+backend/*.log
+
+# ======================
+# ML / ENGAGEMENT
+# ======================
+backend/engagement/*.csv
+backend/engagement/*.log
+backend/engagement/*.pkl
+
+# ======================
+# EXECUTABLES (YOU HAVE THESE)
+# ======================
+*.exe
+
+# ======================
+# OS / EDITOR
+# ======================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ======================
+# SYMLINK (IMPORTANT)
+# ======================
+engagement

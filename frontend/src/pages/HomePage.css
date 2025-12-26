@@ -1,0 +1,398 @@
+.home-root {
+  min-height: 100vh;
+  background: #f9fafc;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Header */
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 32px;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.home-logo {
+  font-weight: 800;
+  font-size: 1.5rem;
+  letter-spacing: 0.04em;
+  color: #6b21a8; /* purple */
+}
+
+.home-header-right {
+  display: flex;
+  gap: 10px;
+}
+
+.icon-btn {
+  border: none;
+  background: transparent;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+/* Alert strip */
+.home-alert-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 32px;
+  background: #fff5f5;
+  border-bottom: 1px solid #fee2e2;
+  font-size: 0.9rem;
+}
+
+.home-alert-pill {
+  background: #dc2626;
+  color: white;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.home-alert-text {
+  color: #7f1d1d;
+}
+
+/* Hero */
+.home-hero {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 24px 32px 16px;
+  gap: 24px;
+}
+
+.home-hero-text {
+  flex: 1 1 260px;
+  max-width: 520px;
+}
+
+.hero-tag {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #6d28d9;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.clickable-icon {
+  cursor: pointer;
+}
+.clickable-icon:hover {
+  transform: scale(1.05);
+  transition: 0.2s ease;
+}
+.home-hero-text h1 {
+  font-size: 2rem;
+  margin: 0 0 8px;
+  color: #111827;
+}
+
+.hero-sub {
+  margin: 0 0 16px;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.hero-cta {
+  border: none;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: #f97316;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.95rem;
+  box-shadow: 0 6px 14px rgba(249, 115, 22, 0.4);
+}
+
+/* Right hero graphic */
+.home-hero-graphic {
+  flex: 1 1 400px;        /* allow the card section to expand */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 20px;        /* keep spacing on both sides */
+}
+
+.hero-card {
+  width: 100%;            /* allow it to stretch */
+  max-width: 520px;       /* NEW: card is much wider now */
+  border-radius: 24px;
+  padding: 24px 32px;
+  background: linear-gradient(135deg, #111827, #1d4ed8);
+  color: white;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.4);
+}
+
+
+.hero-emoji {
+  font-size: 2.4rem;
+  margin-bottom: 8px;
+}
+
+/* Grid of circular tiles */
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 24px;
+  padding: 16px 32px 40px;
+}
+
+.home-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: default !important;
+  text-align: center;
+}
+
+.tile-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: white;
+  margin-bottom: 8px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+
+.tile-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #111827;
+}
+
+/* Colors for different tiles */
+.home-tile.red .tile-icon {
+  background: #ef4444;
+}
+.home-tile.pink .tile-icon {
+  background: #f97316;
+}
+.home-tile.purple .tile-icon {
+  background: #8b5cf6;
+}
+.home-tile.blue .tile-icon {
+  background: #0ea5e9;
+}
+.home-tile.orange .tile-icon {
+  background: #f97316;
+}
+.home-tile.yellow .tile-icon {
+  background: #facc15;
+}
+/* Marquee container */
+.marquee-container {
+  overflow: hidden;
+  white-space: nowrap;
+  width: 100%;
+  position: relative;
+}
+
+/* Actual scrolling text */
+.marquee-text {
+  display: inline-block;
+  padding-left: 100%;
+  animation: scroll-left 10s linear infinite;
+  color: #7f1d1d;
+  font-size: 0.95rem;
+}
+
+/* Animation */
+@keyframes scroll-left {
+  from {
+    transform: translateX(0%);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+/* Small screens */
+@media (max-width: 640px) {
+  .home-header {
+    padding: 10px 16px;
+  }
+  .home-hero {
+    padding: 16px;
+  }
+  .home-grid {
+    padding: 8px 16px 32px;
+  }
+}
+/* Poster carousel */
+
+.poster-carousel {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
+}
+
+
+.poster-track {
+  display: flex;
+  transition: transform 0.7s ease-in-out; /* smooth slide */
+}
+
+.poster-slide {
+  min-width: 100%;
+  flex-shrink: 0;
+}
+
+.poster-slide img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+/* Make it edge-to-edge on small screens */
+@media (max-width: 640px) {
+  .poster-carousel {
+    margin: 12px 12px;
+    border-radius: 14px;
+  }
+}
+/* ---------- Top navigation bar ---------- */
+
+.topnav-root {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 48px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+/* Left part */
+
+.topnav-left {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.topnav-logo {
+  font-weight: 800;
+  font-size: 1.5rem;
+  letter-spacing: 0.05em;
+  color: #a855f7; /* bright purple */
+}
+
+.topnav-menu {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+/* Individual links */
+
+.topnav-link,
+.topnav-more-btn {
+  position: relative;
+  border: none;
+  background: transparent;
+  padding: 4px 0 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #111827;
+  cursor: pointer;
+}
+
+/* base underline (invisible) so layout doesn’t shift */
+.topnav-link::after,
+.topnav-more-btn::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: transparent;
+}
+
+/* Active link underline */
+
+.topnav-link-active::after {
+  background: #a855f7;
+}
+
+/* “Notes ▾”, “Question Papers ▾” etc. */
+
+.topnav-link-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.topnav-caret {
+  font-size: 0.65rem;
+  margin-top: 2px;
+}
+
+/* Right icons */
+
+.topnav-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.topnav-icon-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* Search icon can just be emoji or SVG;
+   here we keep it simple. */
+.topnav-icon-search {
+  font-size: 1.3rem;
+}
+
+/* Hamburger icon */
+
+.topnav-icon-menu {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.topnav-icon-menu span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: #111827;
+  border-radius: 999px;
+}
+
+/* Optional: shrink padding on very small screens */
+
+@media (max-width: 640px) {
+  .topnav-root {
+    padding: 8px 16px;
+  }
+
+  .topnav-menu {
+    gap: 16px;
+  }
+}

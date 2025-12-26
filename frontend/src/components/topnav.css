@@ -1,0 +1,135 @@
+/* ===== ROOT ===== */
+.topnav-root {
+  height: 70px;
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  background: linear-gradient(
+    90deg,
+    #0b1f44,
+    #132f6b,
+    #0b1f44
+  );
+
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+/* ===== LEFT ===== */
+.topnav-left {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+
+/* ===== LOGO ===== */
+.topnav-logo {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.topnav-logo-sub {
+  margin-left: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #7aa2ff;
+}
+
+/* ===== MENU ===== */
+.topnav-menu {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.topnav-link {
+  color: #cfd8ff;
+  text-decoration: none;
+  font-weight: 500;
+  position: relative;
+  transition: all 0.25s ease;
+}
+
+.topnav-link:hover {
+  color: #ffffff;
+}
+
+.topnav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  width: 0%;
+  height: 2px;
+  background: #4ea1ff;
+  transition: width 0.3s ease;
+}
+
+.topnav-link:hover::after {
+  width: 100%;
+}
+
+.topnav-link-active {
+  color: #ffffff;
+}
+
+.topnav-link-active::after {
+  width: 100%;
+}
+
+/* ===== DROPDOWN CARET ===== */
+.topnav-link-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.topnav-caret {
+  color: #9fb6ff;
+  font-size: 12px;
+}
+
+/* ===== RIGHT ===== */
+.topnav-right {
+  display: flex;
+  align-items: center;
+}
+
+/* ===== BUTTONS ===== */
+.topnav-btn {
+  padding: 8px 18px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+.login-btn {
+  background: linear-gradient(135deg, #4ea1ff, #6f7cff);
+  color: #ffffff;
+}
+
+.login-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(78, 161, 255, 0.45);
+}
+
+.logout-btn {
+  background: linear-gradient(135deg, #ff5b5b, #ff3d3d);
+  color: #ffffff;
+}
+
+.logout-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(255, 61, 61, 0.45);
+}

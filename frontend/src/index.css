@@ -1,0 +1,524 @@
+/* Full-screen container */
+.connect-login-page {
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #0d1b2a;
+  overflow: hidden;
+  position: relative;
+}
+
+/* CONNECT Network Background */
+.network-bg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(#1b263b 1px, transparent 1px),
+                    radial-gradient(#1b263b 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: 0 0, 20px 20px;
+  opacity: 0.35;
+}
+
+/* Animated lines */
+.line {
+  position: absolute;
+  width: 2px;
+  height: 180px;
+  background: linear-gradient(#415a77, transparent);
+  opacity: 0.40;
+  transform: rotate(35deg);
+  animation: float 6s infinite ease-in-out;
+}
+
+.line1 { top: 10%; left: 12%; animation-delay: 0s; }
+.line2 { top: 20%; left: 70%; animation-delay: 0.5s; }
+.line3 { top: 75%; left: 25%; animation-delay: 1s; }
+.line4 { top: 65%; left: 80%; animation-delay: 1.5s; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(35deg); }
+  50%      { transform: translateY(-20px) rotate(35deg); }
+}
+
+/* Glowing Dots */
+.dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #778da9;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #778da9;
+  animation: pulse 3s infinite alternate;
+}
+
+.dot1 { top: 15%; left: 30%; }
+.dot2 { top: 40%; left: 75%; }
+.dot3 { top: 70%; left: 45%; }
+.dot4 { top: 85%; left: 20%; }
+
+@keyframes pulse {
+  0%   { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.5); opacity: 1; }
+}
+
+/* Login Box */
+.login-container {
+  width: 380px;
+  background: rgba(255, 255, 255, 0.10);
+  padding: 45px 40px;
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.3);
+  backdrop-filter: blur(10px);
+  z-index: 10;
+  border: 1px solid rgba(255,255,255,0.15);
+  animation: fadeInLogin 0.7s ease;
+}
+
+@keyframes fadeInLogin {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.title h2 {
+  margin: 0;
+  color: #e0e4eb;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.title p {
+  margin-top: 5px;
+  color: #a8b3c6;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+
+/* Inputs */
+.login-container label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 8px;
+  color: #e6e6e6;
+}
+
+.input-box {
+  margin-bottom: 18px;
+}
+
+.input-box input {
+  width: 100%;
+  padding: 13px;
+  border-radius: 7px;
+  border: 1px solid #8ca2be;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 15px;
+  transition: 0.25s;
+}
+
+.input-box input::placeholder {
+  color: #d1d5db;
+}
+
+.input-box input:focus {
+  border-color: #bcd0e6;
+  outline: none;
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 0 6px rgba(172, 196, 228, 0.5);
+}
+
+/* Button */
+.btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  background: linear-gradient(135deg, #415a77, #1b263b);
+  color: white;
+  font-size: 18px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.25s;
+}
+
+.btn:hover {
+  transform: scale(1.03);
+  background: linear-gradient(135deg, #1b263b, #415a77);
+}
+
+/* Error message */
+.login-error {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(127, 29, 29, 0.6);
+  color: #fee2e2;
+  font-size: 13px;
+}
+
+/* Extra links */
+.extra-links {
+  text-align: center;
+  margin-top: 18px;
+  font-size: 14px;
+}
+
+.extra-links a {
+  color: #c7d3e4;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.extra-links a:hover {
+  text-decoration: underline;
+}
+/* ===== Floating chat button ===== */
+.chatfab-btn {
+  position: fixed;
+  right: 28px;
+  bottom: 32px;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  border: none;
+  outline: none;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 24px;
+  background: linear-gradient(135deg, #4b6bfb, #2563eb);
+  color: #fff;
+
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+  z-index: 9999;
+}
+
+/* ===== Chat panel ===== */
+.chatfab-panel {
+  position: fixed;
+  right: 24px;
+  bottom: 100px;
+  width: 360px;
+  max-width: 90vw;
+  height: 420px;
+  max-height: 70vh;
+
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+    overflow-y: auto;  
+  display: flex;
+  flex-direction: column;
+  
+  z-index: 9999;
+}
+
+/* Header */
+.chatfab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #0f172a;
+  color: #f9fafb;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.chatfab-close {
+  border: none;
+  background: transparent;
+  color: #e5e7eb;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+/* Body */
+.chatfab-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;  /* ← Increased from 8px to 12px for more space */
+  padding: 14px;  /* ← Increased padding */
+  font-size: 14px;
+   padding-right: 35px;
+     flex: 1;
+}
+
+.chatfab-input {
+  width: 100%;
+  resize: vertical;
+  min-height: 70px;
+  max-height: 140px;
+  padding: 10px;  /* ← Increased from 8px */
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  background: #f9fafb;  /* ← Added light background to distinguish from answer box */
+}
+
+.chatfab-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb33;
+  background: #ffffff;  /* ← White background when focused */
+}
+
+.chatfab-askbtn {
+  align-self: flex-end;
+  padding: 8px 16px;  /* ← Slightly larger button */
+  border: none;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;  /* ← Added font weight */
+  cursor: pointer;
+  transition: background 0.2s;  /* ← Smooth hover effect */
+}
+
+.chatfab-askbtn:hover:not(:disabled) {
+  background: #1d4ed8;  /* ← Darker blue on hover */
+}
+
+.chatfab-askbtn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.chatfab-error {
+  color: #b91c1c;
+  font-size: 12px;
+}
+
+.chatfab-answer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-top: 2px solid #e5e7eb;  /* ← Increased from 1px to 2px */
+  margin-top: 8px;  /* ← Added margin for extra space */
+  padding: 12px;  /* ← Increased padding */
+  background: #f8fafc;  /* ← Added light gray background */
+  border-radius: 8px;  /* ← Added rounded corners */
+  overflow: hidden;
+
+}
+
+.chatfab-answer-label {
+  font-weight: 600;
+  margin-bottom: 6px;  /* ← Increased from 4px */
+  color: #1e293b;  /* ← Darker text for better contrast */
+}
+
+.chatfab-answer-text {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.4;  /* ← Increased from 1.4 for better readability */
+  color: #334155;  /* ← Slightly darker for readability */
+  padding: 8px;  /* ← Added internal padding */
+  background: #ffffff;  /* ← White background for answer text */
+  border-radius: 6px;  /* ← Rounded corners */
+  border: 1px solid #e2e8f0;
+  max-height: 250px;      /* you can adjust this number */
+  white-space: pre-wrap;  /* keep line breaks from backend */
+  padding-right: 4px;     /* small space so scrollbar isn’t on the text */
+}
+/* Footer.css */
+
+/* Main footer container */
+/* Footer.css - UPDATED */
+
+/* Remove default margins */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+/* Main footer container - FIXED */
+footer {
+  background-color: #0F1A2B;
+  color: white;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden;  /* Prevent child overflow */
+}
+
+/* Top section - FIXED */
+.footer-top {
+  width: 100%;
+  padding: 2.5rem 0;  /* Remove horizontal padding */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+/* Logo and text container - FIXED */
+.footer-branding {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  max-width: 100%;  /* Prevent overflow */
+  box-sizing: border-box;
+}
+
+/* APJ Logo box */
+.footer-logo {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #4b6bfb, #2563eb);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  flex-shrink: 0;  /* Prevent shrinking */
+}
+
+/* University name section */
+.footer-title {
+  text-align: center;
+  max-width: 100%;
+  padding: 0 1rem;  /* Add side padding only here */
+  box-sizing: border-box;
+}
+
+.footer-title h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.25rem 0;
+}
+
+.footer-subtitle {
+  font-size: 0.875rem;
+  color: #D1D5DB;
+  margin: 0;
+}
+
+.footer-malayalam {
+  font-size: 0.875rem;
+  color: #9CA3AF;
+  margin: 0.25rem 0 0 0;
+}
+
+/* Social icons container - FIXED */
+.footer-social {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;  /* Allow wrapping on small screens */
+  max-width: 100%;
+  padding: 0 1rem;  /* Add side padding */
+  box-sizing: border-box;
+}
+
+/* Individual social icon */
+.footer-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid #4B5563;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #D1D5DB;
+  flex-shrink: 0;  /* Prevent shrinking */
+}
+
+.footer-icon:hover {
+  border-color: #3B82F6;
+  background: #3B82F6;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.footer-icon:active {
+  transform: translateY(0);
+}
+
+/* Copyright section - FIXED */
+.footer-copyright {
+  background-color: #29384A;
+  width: 100%;
+  padding: 1rem;
+  text-align: center;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.footer-copyright p {
+  font-size: 0.875rem;
+  color: #D1D5DB;
+  margin: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .footer-top {
+    padding: 2rem 0;
+  }
+
+  .footer-logo {
+    width: 56px;
+    height: 56px;
+    font-size: 1.25rem;
+  }
+
+  .footer-title h2 {
+    font-size: 1.25rem;
+  }
+
+  .footer-social {
+    gap: 0.75rem;
+  }
+
+  .footer-icon {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (min-width: 768px) {
+  .footer-title h2 {
+    font-size: 1.75rem;
+  }
+}
+.notes-btn.danger {
+  background: linear-gradient(135deg, #ff5b6c, #b62335);
+}

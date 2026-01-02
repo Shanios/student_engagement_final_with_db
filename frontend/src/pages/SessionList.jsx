@@ -10,9 +10,11 @@ export default function SessionList() {
   const [error, setError] = useState("");
   const [selectedSession, setSelectedSession] = useState(null);
   const [participants, setParticipants] = useState([]);
-  const [downloadingCsv, setDownloadingCsv] = useState(false);
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
+  
+  // ✅ FIXED: Track which sessions are downloading/sending
+  const [downloadingCsv, setDownloadingCsv] = useState(new Set());
+  const [sendingEmail, setSendingEmail] = useState(new Set());
+  const [emailSent, setEmailSent] = useState(new Set());
 
   // Fetch all ended sessions
   useEffect(() => {
@@ -62,7 +64,9 @@ export default function SessionList() {
 
   // Download CSV
   const handleDownloadCsv = async (sessionId) => {
-    setDownloadingCsv(true);
+    // ✅ FIXED: Add this session to downloading set
+    setDownloadingCsv((prev) => new Set([...prev, sessionId]));
+    
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
@@ -80,26 +84,31 @@ export default function SessionList() {
       link.setAttribute("download", `session_${sessionId}_attendance.csv`);
       document.body.appendChild(link);
       link.click();
-      link.parentChild.removeChild(link);
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
 
       console.log("✅ CSV downloaded");
     } catch (err) {
       console.error("❌ Download failed:", err);
       setError("Failed to download attendance");
     } finally {
-      setDownloadingCsv(false);
+      // ✅ FIXED: Remove this session from downloading set
+      setDownloadingCsv((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(sessionId);
+        return newSet;
+      });
     }
   };
 
   // Send email with attendance
   const handleSendEmail = async (sessionId) => {
-    setSendingEmail(true);
-    setEmailSent(false);
+    // ✅ FIXED: Add this session to sending set
+    setSendingEmail((prev) => new Set([...prev, sessionId]));
 
     try {
       const token = localStorage.getItem("token");
       
-      // Call new endpoint to send email
       const res = await axios.post(
         `http://127.0.0.1:8000/api/attendance/session/${sessionId}/send-email`,
         {},
@@ -107,15 +116,46 @@ export default function SessionList() {
       );
 
       console.log("✅ Email sent:", res.data);
-      setEmailSent(true);
+      
+      // ✅ FIXED: Add this session to emailSent set
+      setEmailSent((prev) => new Set([...prev, sessionId]));
 
       // Hide success message after 5 seconds
-      setTimeout(() => setEmailSent(false), 5000);
+      setTimeout(() => {
+        setEmailSent((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(sessionId);
+          return newSet;
+        });
+      }, 5000);
     } catch (err) {
       console.error("❌ Email send failed:", err);
       setError(err?.response?.data?.detail || "Failed to send email");
     } finally {
-      setSendingEmail(false);
+      // ✅ FIXED: Remove this session from sending set
+      setSendingEmail((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(sessionId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleDeleteSession = async (sessionId) => {
+    if (!window.confirm("Are you sure you want to delete this session?")) return;
+
+    try {
+      const token = localStorage.getItem("token");
+
+      await axios.delete(
+        `http://127.0.0.1:8000/api/engagement/sessions/${sessionId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Remove from UI
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    } catch (err) {
+      setError("Failed to delete session");
     }
   };
 
@@ -134,23 +174,6 @@ export default function SessionList() {
       </div>
     );
   }
-const handleDeleteSession = async (sessionId) => {
-  if (!window.confirm("Are you sure you want to delete this session?")) return;
-
-  try {
-    const token = localStorage.getItem("token");
-
-    await axios.delete(
-      `http://127.0.0.1:8000/api/engagement/sessions/${sessionId}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    // Remove from UI
-    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-  } catch (err) {
-    setError("Failed to delete session");
-  }
-};
 
   return (
     <div
@@ -181,23 +204,6 @@ const handleDeleteSession = async (sessionId) => {
         </div>
       )}
 
-      {/* Success Banner */}
-      {emailSent && (
-        <div
-          style={{
-            marginBottom: "20px",
-            padding: "14px 16px",
-            background: "#065f46",
-            border: "1px solid #059669",
-            borderRadius: "6px",
-            color: "#86efac",
-            animation: "slideIn 0.3s ease",
-          }}
-        >
-          ✅ Attendance report sent to your email!
-        </div>
-      )}
-
       {/* Sessions Grid */}
       {sessions.length > 0 ? (
         <div
@@ -209,140 +215,140 @@ const handleDeleteSession = async (sessionId) => {
           }}
         >
           {sessions.map((session) => (
-            <div
-              key={session.id}
-              style={{
-                background: "#1e293b",
-                border: "2px solid #334155",
-                borderRadius: "8px",
-                padding: "16px",
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                hover: { borderColor: "#3b82f6" },
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "#3b82f6";
-                e.currentTarget.style.transform = "translateY(-4px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "#334155";
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
-            >
-              <h3 style={{ marginTop: 0, color: "#f1f5f9" }}>{session.title}</h3>
-
-              {session.subject && (
-                <p style={{ margin: "8px 0", color: "#cbd5e1", fontSize: "14px" }}>
-                  <strong>Subject:</strong> {session.subject}
-                </p>
+            <div key={session.id}>
+              {/* ✅ FIXED: Success Banner per session */}
+              {emailSent.has(session.id) && (
+                <div
+                  style={{
+                    marginBottom: "10px",
+                    padding: "14px 16px",
+                    background: "#065f46",
+                    border: "1px solid #059669",
+                    borderRadius: "6px",
+                    color: "#86efac",
+                    animation: "slideIn 0.3s ease",
+                  }}
+                >
+                  ✅ Attendance report sent to your email!
+                </div>
               )}
 
-              <p style={{ margin: "8px 0", color: "#cbd5e1", fontSize: "14px" }}>
-                <strong>Date:</strong>{" "}
-                {new Date(session.ended_at).toLocaleDateString()} at{" "}
-                {new Date(session.ended_at).toLocaleTimeString()}
-              </p>
+              <div
+                style={{
+                  background: "#1e293b",
+                  border: "2px solid #334155",
+                  borderRadius: "8px",
+                  padding: "16px",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "#3b82f6";
+                  e.currentTarget.style.transform = "translateY(-4px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "#334155";
+                  e.currentTarget.style.transform = "translateY(0)";
+                }}
+              >
+                <h3 style={{ marginTop: 0, color: "#f1f5f9" }}>{session.title}</h3>
 
-              <p style={{ margin: "8px 0", color: "#cbd5e1", fontSize: "14px" }}>
-                <strong>Duration:</strong>{" "}
-                {Math.floor(session.duration_seconds / 60)} minutes
-              </p>
+                {session.subject && (
+                  <p style={{ margin: "8px 0", color: "#cbd5e1", fontSize: "14px" }}>
+                    <strong>Subject:</strong> {session.subject}
+                  </p>
+                )}
 
-              <p style={{ margin: "8px 0", color: "#10b981", fontSize: "14px", fontWeight: "600" }}>
-                👥 Students Attended: {session.attendance_count}
-              </p>
+                <p style={{ margin: "8px 0", color: "#cbd5e1", fontSize: "14px" }}>
+                  <strong>Date:</strong>{" "}
+                  {new Date(session.ended_at).toLocaleDateString()} at{" "}
+                  {new Date(session.ended_at).toLocaleTimeString()}
+                </p>
 
-              <p style={{ margin: "8px 0", color: "#60a5fa", fontSize: "14px" }}>
-                📊 Avg Engagement: {(session.avg_engagement * 100).toFixed(1)}%
-              </p>
+                <p style={{ margin: "8px 0", color: "#cbd5e1", fontSize: "14px" }}>
+                  <strong>Duration:</strong>{" "}
+                  {Math.floor(session.duration_seconds / 60)} minutes
+                </p>
 
-              {/* Action Buttons */}
-              <div style={{ display: "flex", gap: "10px", marginTop: "12px", flexWrap: "wrap" }}>
-                
-                {/* ✅ NEW: View Full Report Button */}
-                <button
-                  onClick={() => navigate(`/teacher/sessions/${session.id}/report`)}
-                  style={{
-                    padding: "8px 12px",
-                    fontSize: "12px",
-                    background: "#8b5cf6",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    fontWeight: "600",
-                  }}
-                  onMouseEnter={(e) => (e.target.style.background = "#7c3aed")}
-                  onMouseLeave={(e) => (e.target.style.background = "#8b5cf6")}
-                >
-                  📊 View Report
-                </button>
+                <p style={{ margin: "8px 0", color: "#10b981", fontSize: "14px", fontWeight: "600" }}>
+                  👥 Students Attended: {session.attendance_count}
+                </p>
 
-                <button
-                  onClick={() => handleViewAttendance(session.id)}
-                  style={{
-                    padding: "8px 12px",
-                    fontSize: "12px",
-                    background: "#3b82f6",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    fontWeight: "600",
-                  }}
-                >
-                  👁️ View Details
-                </button>
-                
-                <button
-                  onClick={() => handleDownloadCsv(session.id)}
-                  disabled={downloadingCsv}
-                  style={{
-                    padding: "8px 12px",
-                    fontSize: "12px",
-                    background: downloadingCsv ? "#334155" : "#10b981",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: downloadingCsv ? "not-allowed" : "pointer",
-                    fontWeight: "600",
-                  }}
-                >
-                  {downloadingCsv ? "⏳ Downloading..." : "📥 Download CSV"}
-                </button>
+                <p style={{ margin: "8px 0", color: "#60a5fa", fontSize: "14px" }}>
+                  📊 Avg Engagement: {(session.avg_engagement * 100).toFixed(1)}%
+                </p>
 
-                <button
-                  onClick={() => handleSendEmail(session.id)}
-                  disabled={sendingEmail}
-                  style={{
-                    padding: "8px 12px",
-                    fontSize: "12px",
-                    background: sendingEmail ? "#334155" : "#ec4899",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: sendingEmail ? "not-allowed" : "pointer",
-                    fontWeight: "600",
-                  }}
-                >
-                  {sendingEmail ? "⏳ Sending..." : "📧 Email Report"}
-                </button>
-                <button
-  onClick={() => handleDeleteSession(session.id)}
-  style={{
-    padding: "8px 12px",
-    fontSize: "12px",
-    background: "#dc2626",
-    color: "white",
-    border: "none",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontWeight: "600",
-  }}
->
-  🗑️ Delete
-</button>
+                {/* Action Buttons */}
+                <div style={{ display: "flex", gap: "10px", marginTop: "12px", flexWrap: "wrap" }}>
+                  
+                  <button
+                    onClick={() => navigate(`/teacher/sessions/${session.id}/report`)}
+                    style={{
+                      padding: "8px 12px",
+                      fontSize: "12px",
+                      background: "#8b5cf6",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontWeight: "600",
+                    }}
+                    onMouseEnter={(e) => (e.target.style.background = "#7c3aed")}
+                    onMouseLeave={(e) => (e.target.style.background = "#8b5cf6")}
+                  >
+                    📊 View Report
+                  </button>
+                  
+                  <button
+                    onClick={() => handleDownloadCsv(session.id)}
+                    disabled={downloadingCsv.has(session.id)}
+                    style={{
+                      padding: "8px 12px",
+                      fontSize: "12px",
+                      background: downloadingCsv.has(session.id) ? "#334155" : "#10b981",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: downloadingCsv.has(session.id) ? "not-allowed" : "pointer",
+                      fontWeight: "600",
+                    }}
+                  >
+                    {downloadingCsv.has(session.id) ? "⏳ Downloading..." : "📥 Download CSV"}
+                  </button>
 
+                  <button
+                    onClick={() => handleSendEmail(session.id)}
+                    disabled={sendingEmail.has(session.id)}
+                    style={{
+                      padding: "8px 12px",
+                      fontSize: "12px",
+                      background: sendingEmail.has(session.id) ? "#334155" : "#ec4899",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: sendingEmail.has(session.id) ? "not-allowed" : "pointer",
+                      fontWeight: "600",
+                    }}
+                  >
+                    {sendingEmail.has(session.id) ? "⏳ Sending..." : "📧 Email Report"}
+                  </button>
+
+                  <button
+                    onClick={() => handleDeleteSession(session.id)}
+                    style={{
+                      padding: "8px 12px",
+                      fontSize: "12px",
+                      background: "#dc2626",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontWeight: "600",
+                    }}
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))}

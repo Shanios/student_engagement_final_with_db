@@ -1,0 +1,48 @@
+# ======================
+# DATABASES
+# ======================
+*.db
+*.sqlite
+*.sqlite3
+
+# ======================
+# PYTHON
+# ======================
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+
+# ======================
+# FRONTEND (React / Vite)
+# ======================
+frontend/node_modules/
+frontend/dist/
+frontend/.env*
+
+# ======================
+# BACKEND
+# ======================
+backend/node_modules/
+backend/__pycache__/
+backend/*.log
+
+# ======================
+# ENGAGEMENT / ML
+# ======================
+backend/engagement/
+engagement/
+
+# ======================
+# EXECUTABLES
+# ======================
+*.exe
+
+# ======================
+# IDE / OS
+# ======================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,7 +1,7 @@
 # backend/engagement.py
 from datetime import datetime
 from typing import List, Optional
-
+from models import DeviceLog
 from fastapi import APIRouter,Header, Depends, HTTPException, Query, UploadFile, File, Request,BackgroundTasks
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -35,51 +35,95 @@ def get_db():
         db.close()
 def get_ml_script_path():
     """
-    CORRECTED: Add 'backend' to the path
+    Get absolute path to realtime_engagement.py
+    Searches multiple locations with fallback.
+    
+    Tries:
+    1. D:\student_engagement\backend\engagement\realtime_engagement.py
+    2. D:\student_engagement\engagement\realtime_engagement.py (symbolic)
+    3. Current directory variations
     """
-    backend_dir = Path(__file__).parent  # This gives backend/ directory
     
-    # ML script is in backend/engagement/realtime_engagement.py
-    ml_script = backend_dir / "engagement" / "realtime_engagement.py"
+    current_file = Path(__file__).resolve()
     
-    print(f"🔍 Looking for ML script at: {ml_script}")
+    print(f"\n{'='*70}")
+    print(f"🔍 SEARCHING FOR ML SCRIPT")
+    print(f"   Current file: {current_file}")
+    print(f"{'='*70}\n")
     
-    if ml_script.exists():
-        print(f"✅ Found ML script at: {ml_script}")
-        return str(ml_script)
+    # Build list of candidate paths
+    candidates = []
     
-    # If not found, try creating it
-    print(f"⚠️ Creating ML script at: {ml_script}")
-    ml_script.parent.mkdir(parents=True, exist_ok=True)
+    # 1. If in backend/engagement/, look in same directory
+    if "engagement" in str(current_file):
+        candidates.append(current_file.parent / "realtime_engagement.py")
     
-    # Copy your existing file there
-    source_file = Path("D:\\student_engagement\\backend\\engagement\\realtime_engagement.py")
-    if source_file.exists():
-        import shutil
-        shutil.copy(source_file, ml_script)
-        print(f"✅ Copied from {source_file}")
-    else:
-        # Create a placeholder
-        with open(ml_script, 'w') as f:
-            f.write("# ML script placeholder\n")
-        print(f"✅ Created placeholder")
+    # 2. Backend directory
+    backend_dir = Path(__file__).resolve().parent
+    candidates.append(backend_dir / "realtime_engagement.py")
+    candidates.append(backend_dir / "engagement" / "realtime_engagement.py")
     
-    return str(ml_script)
+    # 3. Parent of backend (project root)
+    project_root = backend_dir.parent
+    candidates.append(project_root / "engagement" / "realtime_engagement.py")
+    candidates.append(project_root / "backend" / "engagement" / "realtime_engagement.py")
+    
+    # 4. Absolute paths
+    candidates.append(Path("D:\\student_engagement\\backend\\engagement\\realtime_engagement.py"))
+    candidates.append(Path("D:\\student_engagement\\engagement\\realtime_engagement.py"))
+    
+    # Search
+    print("Searching locations:")
+    for p in candidates:
+        exists = p.exists()
+        status = "✅ FOUND" if exists else "❌ not found"
+        print(f"  {status}: {p}")
+        
+        if exists:
+            resolved = p.resolve()
+            print(f"\n✅ USING: {resolved}\n")
+            print(f"{'='*70}\n")
+            return str(resolved)
+    
+    # Not found - show all attempted paths
+    error_msg = "ML script not found in any location:\n"
+    for p in candidates:
+        error_msg += f"  - {p}\n"
+    
+    print(f"❌ {error_msg}")
+    print(f"{'='*70}\n")
+    raise FileNotFoundError(error_msg)
 
 
 def get_model_path():
     """
     Get absolute path to engagement_model.pkl
-    CORRECTED: Look in multiple likely locations
+    Searches in multiple locations with fallback.
     """
-    backend_dir = Path(__file__).parent  # student_engagement/backend/
+    # Get the directory where THIS file (engagement.py) is located
+    current_file = Path(__file__).resolve()
+    print(f"📍 Current file: {current_file}")
+    
+    # Try to find backend directory
+    backend_dir = None
+    
+    # If engagement.py is in backend/engagement/, go up 2 levels
+    if current_file.parent.name == "engagement":
+        backend_dir = current_file.parent.parent
+    # If engagement.py is in backend/, go up 1 level
+    elif current_file.parent.name == "backend":
+        backend_dir = current_file.parent
+    # Otherwise, assume we're in backend
+    else:
+        backend_dir = current_file.parent
+    
+    print(f"🔍 Backend dir: {backend_dir}")
     
     # Try multiple possible locations
     possible_paths = [
-        backend_dir / "engagement" / "engagement_model.pkl",  # backend/engagement/engagement_model.pkl
-        backend_dir / "engagement_model.pkl",  # backend/engagement_model.pkl
-        backend_dir.parent / "engagement_model.pkl",  # student_engagement/engagement_model.pkl
-        Path("engagement_model.pkl"),  # Current working directory
+        backend_dir / "engagement" / "engagement_model.pkl",
+        backend_dir / "engagement_model.pkl",
+        current_file.parent / "engagement_model.pkl",
     ]
     
     print("🔍 Searching for model file:")
@@ -90,29 +134,26 @@ def get_model_path():
             print(f"✅ Using model at: {p}")
             return str(p)
     
-    raise FileNotFoundError(f"Model not found. Searched in: {[str(p) for p in possible_paths]}")
-
-
+    # If not found, show helpful error
+    raise FileNotFoundError(
+        f"Model not found. Searched locations:\n" +
+        "\n".join([f"  - {p}" for p in possible_paths])
+    )
 @router.post("/start-ml")
 def start_ml_process(
     session_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Start the realtime_engagement.py ML process for a student.
+    """Start ML process with correct environment setup"""
     
-    ✅ Only students can start ML
-    ✅ Session must exist and be active
-    ✅ Only one ML process per session
-    ✅ Returns process ID for debugging
-    """
+    print(f"\n{'='*80}")
+    print(f"🧠 ML START REQUEST - Session {session_id}, Student {current_user.id}")
+    print(f"{'='*80}\n")
     
-    # 1️⃣ Authorization: Only students
     if current_user.role != "student":
-        raise HTTPException(403, "Only students can start ML process")
+        raise HTTPException(403, "Only students can start ML")
     
-    # 2️⃣ Verify session exists and is active
     session = db.query(EngagementSession).filter(
         EngagementSession.id == session_id
     ).first()
@@ -123,66 +164,100 @@ def start_ml_process(
     if session.ended_at is not None:
         raise HTTPException(400, "Session has already ended")
     
-    # 3️⃣ Verify student has joined attendance
     from models import Attendance
     attendance = db.query(Attendance).filter(
         Attendance.session_id == session_id,
         Attendance.student_id == current_user.id
     ).first()
     
+    
     if not attendance:
         raise HTTPException(403, "Student has not joined this session")
     
-    # 4️⃣ Check if ML already running for this session
     if session_id in ACTIVE_ML_PROCESSES:
         proc = ACTIVE_ML_PROCESSES[session_id]
-        if proc.poll() is None:  # Still running
-            return {
-                "status": "already_running",
-                "session_id": session_id,
-                "pid": proc.pid,
-                "message": "ML process already active"
-            }
+        if proc.poll() is None:
+            return {"status": "already_running", "session_id": session_id, "pid": proc.pid}
         else:
-            # Process died, clean up
             del ACTIVE_ML_PROCESSES[session_id]
     
-    # 5️⃣ Start the ML process
     try:
+        import sys
+        python_exe = sys.executable
+        
         ml_script = get_ml_script_path()
-        model_path = get_model_path()
         ml_token = create_access_token(data={"sub": str(current_user.id)})
-        # Command to run:
-        # python realtime_engagement.py --session-id=10 --model=path/to/model.pkl
+        
+        ml_script_abs = str(Path(ml_script).resolve())
+        script_dir = str(Path(ml_script_abs).parent)
+        
         cmd = [
-            "python",
-            ml_script,
+            python_exe,
+            ml_script_abs,
             f"--session-id={session_id}",
             f"--student-id={current_user.id}",
             f"--token={ml_token}",
-           f"--backend=http://127.0.0.1:8000",
+            f"--backend=http://127.0.0.1:8000",
         ]
         
-        print(f"🧠 Starting ML process for session {session_id}")
-        print(f"   Command: {' '.join(cmd)}")
+        print(f"📄 Script: {ml_script_abs}")
+        print(f"📂 Working Dir: {script_dir}")
+        print(f"🐍 Python: {python_exe}\n")
+        
+        # ✅ CRITICAL: Prepare environment with all necessary variables
         env = os.environ.copy()
         env["CAMERA_DEVICE_KEY"] = os.getenv("CAMERA_DEVICE_KEY", "default-device-key")
-        # Spawn subprocess (detached so it survives if server restarts)
+        env["PYTHONUNBUFFERED"] = "1"
+        
+        print(f"🔐 CAMERA_DEVICE_KEY: {env['CAMERA_DEVICE_KEY']}")
+        print(f"🌍 PYTHONPATH: {env.get('PYTHONPATH', 'not set')}\n")
+        
+        # ✅ SPAWN WITH CORRECT WORKING DIRECTORY
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
             env=env,
-            # Detach from parent process on both Windows and Unix
+            cwd=script_dir,  # ✅ CRITICAL: Same directory as manual run
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0,
             start_new_session=True if os.name != 'nt' else False,
         )
         
-        # 6️⃣ Store process reference
+        print(f"✅ Process spawned: PID {proc.pid}")
+        print(f"⏳ Waiting 3 seconds to check for immediate crashes...\n")
+        
+        import time
+        time.sleep(3)
+        
+        returncode = proc.poll()
+        
+        if returncode is not None:
+            stdout, stderr = proc.communicate()
+            
+            print(f"\n{'='*80}")
+            print(f"❌ ML PROCESS CRASHED - Exit Code: {returncode}")
+            print(f"{'='*80}")
+            print(f"\n📋 STDERR:\n{stderr if stderr else '(empty)'}")
+            print(f"\n📋 STDOUT:\n{stdout if stdout else '(empty)'}")
+            print(f"\n{'='*80}\n")
+            
+            # Also save to file
+            with open("ml_crash_log.txt", "w") as f:
+                f.write(f"Exit Code: {returncode}\n\n")
+                f.write(f"STDERR:\n{stderr}\n\n")
+                f.write(f"STDOUT:\n{stdout}\n")
+            
+            raise HTTPException(500, f"ML crashed with exit code {returncode}")
+        
         ACTIVE_ML_PROCESSES[session_id] = proc
         
-        print(f"✅ ML process started: PID {proc.pid}")
+        print(f"{'='*80}")
+        print(f"✅ ML PROCESS RUNNING")
+        print(f"   PID: {proc.pid}")
+        print(f"   Session: {session_id}")
+        print(f"   Directory: {script_dir}")
+        print(f"{'='*80}\n")
         
         return {
             "status": "started",
@@ -192,12 +267,13 @@ def start_ml_process(
         }
         
     except FileNotFoundError as e:
-        raise HTTPException(500, f"ML script or model not found: {str(e)}")
+        print(f"❌ File not found: {e}\n")
+        raise HTTPException(500, str(e))
     except Exception as e:
-        print(f"❌ Failed to start ML process: {e}")
-        raise HTTPException(500, f"Failed to start ML process: {str(e)}")
-
-
+        print(f"❌ Exception: {e}\n")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(500, str(e))
 @router.post("/stop-ml")
 def stop_ml_process(
     session_id: int,
@@ -544,22 +620,37 @@ def heartbeat(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """
+    ✅ FIXED: Keep-alive endpoint for both teacher and student
+    
+    Purpose:
+    - Teacher sends to keep session alive
+    - Student sends to keep their connection active
+    - ⚠️ DOES NOT create/modify attendance records
+    
+    Returns:
+    - {"status": "alive"} if session is active
+    - {"status": "ended"} if session has been ended
+    """
+    
     session = db.query(EngagementSession).filter(
         EngagementSession.id == session_id
     ).first()
 
     if not session:
-        raise HTTPException(404)
+        raise HTTPException(status_code=404, detail="Session not found")
 
     if session.ended_at is not None:
+        print(f"📍 Heartbeat received for ended session {session_id}")
         return {"status": "ended"}
 
-    if current_user.role != "teacher":
-        raise HTTPException(403)
-
+    # ✅ ONLY update session timestamp
+    # ⚠️ Do NOT create/modify attendance here
     session.last_seen_at = datetime.utcnow()
     db.commit()
 
+    print(f"💓 Heartbeat from {current_user.role} {current_user.id} for session {session_id}")
+    
     return {"status": "alive"}
 # ---------- Student join session via share code ----------
 
@@ -613,40 +704,40 @@ def join_session(
         share_code=session.share_code,
         started_at=session.started_at,
     )
-@router.post("/attendance/join/{session_id}")
-def attend_session(
-    session_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Record student attendance in session"""
+# @router.post("/attendance/join/{session_id}")
+# def attend_session(
+#     session_id: int,
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_current_user),
+# ):
+#     """Record student attendance in session"""
     
-    from models import Attendance
+#     from models import Attendance
     
-    # Check if already marked
-    existing = db.query(Attendance).filter(
-        Attendance.session_id == session_id,
-        Attendance.student_id == current_user.id
-    ).first()
+#     # Check if already marked
+#     existing = db.query(Attendance).filter(
+#         Attendance.session_id == session_id,
+#         Attendance.student_id == current_user.id
+#     ).first()
     
-    if existing:
-        return {"status": "already_joined", "session_id": session_id}
+#     if existing:
+#         return {"status": "already_joined", "session_id": session_id}
     
-    # Mark attendance
-    attendance = Attendance(
-        session_id=session_id,
-        student_id=current_user.id,
-        joined_at=datetime.utcnow()
-    )
+#     # Mark attendance
+#     attendance = Attendance(
+#         session_id=session_id,
+#         student_id=current_user.id,
+#         joined_at=datetime.utcnow()
+#     )
     
-    db.add(attendance)
-    db.commit()
+    # db.add(attendance)
+    # db.commit()
     
-    return {
-        "status": "joined",
-        "session_id": session_id,
-        "message": "Attendance recorded"
-    }
+    # return {
+    #     "status": "joined",
+    #     "session_id": session_id,
+    #     "message": "Attendance recorded"
+    # }
 # ---------- Student engagement stream (JWT – Student only) ----------
 @router.post("/sessions/{session_id}/stream")
 def stream_engagement(
@@ -655,11 +746,25 @@ def stream_engagement(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """
+    ✅ FIXED: Stream engagement points during session.
+    
+    Requirements:
+    1. Only students can stream
+    2. Session must be active (not ended)
+    3. Student must have joined (attendance exists)
+    4. Student must be currently present (left_at IS NULL)
+    
+    Purpose:
+    - Receive real-time engagement scores from ML model
+    - Store as time-series data for analytics
+    """
+    
     # 1️⃣ Only students can send engagement
     if current_user.role != "student":
         raise HTTPException(status_code=403, detail="Only students can stream engagement")
 
-    # 2️⃣ Validate session
+    # 2️⃣ Validate session exists and is active
     session = db.query(EngagementSession).filter(
         EngagementSession.id == session_id
     ).first()
@@ -670,7 +775,7 @@ def stream_engagement(
     if session.ended_at is not None:
         raise HTTPException(status_code=403, detail="Session already ended")
 
-    # 3️⃣ Ensure student has joined (attendance check)
+    # 3️⃣ ✅ FIXED: Ensure student has joined AND is still present
     from models import Attendance
     attendance = db.query(Attendance).filter(
         Attendance.session_id == session_id,
@@ -681,6 +786,13 @@ def stream_engagement(
         raise HTTPException(
             status_code=403,
             detail="Student has not joined the session"
+        )
+
+    # ✅ NEW: Check that student hasn't left
+    if attendance.left_at is not None:
+        raise HTTPException(
+            status_code=403,
+            detail="Student has already left this session"
         )
 
     # 4️⃣ Store engagement point (time-series)
@@ -695,8 +807,17 @@ def stream_engagement(
 
     db.add(point)
     db.commit()
+    db.refresh(point)  # ✅ Optional: Refresh to get generated ID
 
-    return {"status": "ok"}
+    print(f"📊 Engagement point recorded: Session {session_id}, Student {current_user.id}, Score {payload.score:.3f}")
+
+    return {
+        "status": "ok",
+        "point_id": point.id,
+        "session_id": session_id,
+        "timestamp": point.timestamp.isoformat(),
+        "score": point.score
+    }
 
 # ---------- Camera upload (DEVICE AUTH – NO JWT) ----------
 from slowapi import Limiter
@@ -705,17 +826,28 @@ from slowapi.util import get_remote_address
 limiter = Limiter(key_func=get_remote_address)
 
 @router.post("/sessions/{session_id}/points", response_model=PointOut)
-@limiter.limit("10/second")  # ✅ NEW: Max 10 uploads per second per IP
+@limiter.limit("30/second")  # ✅ NEW: Max 30 uploads per second per IP
 def add_point(
+    
     session_id: int,
     payload: PointCreate,
     request: Request,  # ✅ NEW: For IP tracking
     db: Session = Depends(get_db),
     _: None = Depends(verify_camera_device),  # 🔐 device auth
-):
+): 
+
     # ✅ NEW: Log successful upload
-    from models import DeviceLog
-    
+    print("🔐 verify_camera_device CALLED")
+
+    print("🔥 /points endpoint HIT")
+    print(f"\n{'='*60}")
+    print(f"📥 ENGAGEMENT POINT RECEIVED")
+    print(f"   Session ID: {session_id}")
+    print(f"   Score: {payload.score:.3f}")
+    ear_str = f"{payload.ear:.3f}" if payload.ear is not None else "N/A"
+    print(f"   EAR: {ear_str}")    
+    print(f"   Timestamp: {payload.timestamp}")
+    print(f"{'='*60}\n")
     session = db.query(EngagementSession).filter(
         EngagementSession.id == session_id
     ).first()
@@ -752,14 +884,19 @@ def add_point(
         details="Point uploaded",
         points_uploaded=1
     )
+    db.add(device_log)  # ✅ ADD THIS
+    db.commit()
   
     
 
 
-    db.add(device_log)
-    db.commit()
+ 
     
-    return point  # ✅ ADD THIS LINE
+    return PointOut(
+        timestamp=point.timestamp,
+        score=point.score,
+        ear=point.ear
+    )  # ✅ ADD THIS LINE
 
 # ---------- Graph read (JWT – Teacher/Student) ----------
 @router.get("/sessions/{session_id}/series/updates", response_model=list[PointOut])
@@ -922,7 +1059,7 @@ def get_teacher_sessions(
     - Only teacher can access
     - Only ended sessions (ended_at IS NOT NULL)
     - Sorted by date (newest first)
-    - Includes engagement metrics
+    - Includes engagement metrics + CORRECT student count
     """
     
     if current_user.role != "teacher":
@@ -936,15 +1073,39 @@ def get_teacher_sessions(
     # Build response with statistics
     result = []
     for session in sessions:
+        # ✅ ENGAGEMENT POINTS (for avg score calculation)
         points = db.query(EngagementPoint).filter(
             EngagementPoint.session_id == session.id
         ).all()
         
-        duration = int((session.ended_at - session.started_at).total_seconds())
+        # ✅ CALCULATE SESSION DURATION (reusable)
+        session_duration = (session.ended_at - session.started_at).total_seconds()
         
+        # ✅ COUNT VALID STUDENTS (attended ≥15% of session)
+        attendance_records = db.query(Attendance).filter(
+            Attendance.session_id == session.id
+        ).all()
+        
+        valid_students = 0
+        for a in attendance_records:
+            if not a.joined_at:
+                continue
+            
+            if a.left_at:
+                attended_seconds = (a.left_at - a.joined_at).total_seconds()
+            else:
+                attended_seconds = (session.ended_at - a.joined_at).total_seconds()
+            
+            attendance_percentage = (attended_seconds / session_duration) * 100
+            
+            if attendance_percentage >= 15:
+                valid_students += 1
+        
+        # ✅ ENGAGEMENT SCORES (unchanged)
         scores = [p.score for p in points]
         avg_score = sum(scores) / len(scores) if scores else 0
         
+        # ✅ BUILD RESPONSE (point_count → attendance_count)
         result.append({
             "id": session.id,
             "title": session.title,
@@ -952,8 +1113,8 @@ def get_teacher_sessions(
             "started_at": session.started_at.isoformat(),
             "ended_at": session.ended_at.isoformat(),
             "share_code": session.share_code,
-            "duration_seconds": duration,
-            "point_count": len(points),
+            "duration_seconds": int(session_duration),
+            "attendance_count": valid_students,  # ✅ CORRECT: Student count, not upload count
             "avg_engagement": round(avg_score, 3),
             "max_engagement": max(scores) if scores else 0,
         })
@@ -1092,6 +1253,8 @@ from analytics import get_comprehensive_analytics
 
 
 
+# ========== FIXED: Report Endpoint with Correct Duration ==========
+
 @router.get("/sessions/{session_id}/report")
 def get_session_report(
     session_id: int,
@@ -1124,12 +1287,24 @@ def get_session_report(
             detail="Session must be ended before viewing report"
         )
     
+    # ✅ FIX #1: Calculate duration correctly
+    duration_seconds = int((session.ended_at - session.started_at).total_seconds())
+    duration_minutes = duration_seconds // 60
+    duration_secs = duration_seconds % 60
+    duration_formatted = f"{duration_minutes}m {duration_secs}s"
+    
+    print(f"📊 Duration calculation:")
+    print(f"   Started: {session.started_at}")
+    print(f"   Ended: {session.ended_at}")
+    print(f"   Delta: {duration_seconds} seconds")
+    print(f"   Formatted: {duration_formatted}\n")
+    
     # Fetch engagement points (may be empty)
     points = db.query(EngagementPoint).filter(
         EngagementPoint.session_id == session_id
     ).order_by(EngagementPoint.timestamp.asc()).all()
     
-    # ✅ NEW: Handle empty data gracefully
+    # ✅ FIX #2: Handle empty data gracefully
     if not points:
         # Return empty report structure
         return {
@@ -1138,8 +1313,9 @@ def get_session_report(
             "subject": session.subject,
             "started_at": session.started_at.isoformat(),
             "ended_at": session.ended_at.isoformat(),
-            "duration_minutes": 0,
-            "duration_formatted": "0m 0s",
+            "duration_minutes": duration_minutes,
+            "duration_seconds": duration_seconds,
+            "duration_formatted": duration_formatted,
             "generated_at": datetime.utcnow().isoformat(),
             
             "analytics": {
@@ -1149,9 +1325,9 @@ def get_session_report(
                     "min_score": 0.0,
                     "max_score": 0.0,
                     "total_points": 0,
-                    "duration_seconds": int((session.ended_at - session.started_at).total_seconds()),
-                    "duration_minutes": int((session.ended_at - session.started_at).total_seconds()) // 60,
-                    "duration_formatted": f"{int((session.ended_at - session.started_at).total_seconds()) // 60}m {int((session.ended_at - session.started_at).total_seconds()) % 60}s",
+                    "duration_seconds": duration_seconds,
+                    "duration_minutes": duration_minutes,
+                    "duration_formatted": duration_formatted,
                     "attention_score": 0,
                     "focus_time_percentage": 0.0,
                     "volatility": 0.0,
@@ -1192,6 +1368,11 @@ def get_session_report(
     from analytics import get_comprehensive_analytics
     analytics = get_comprehensive_analytics(points_data)
     
+    # ✅ FIX #3: Ensure duration is in analytics too
+    analytics['summary']['duration_seconds'] = duration_seconds
+    analytics['summary']['duration_minutes'] = duration_minutes
+    analytics['summary']['duration_formatted'] = duration_formatted
+    
     # Return structured report
     return {
         "session_id": session_id,
@@ -1199,8 +1380,9 @@ def get_session_report(
         "subject": session.subject,
         "started_at": session.started_at.isoformat(),
         "ended_at": session.ended_at.isoformat(),
-        "duration_minutes": analytics['summary'].get('duration_minutes', 0),
-        "duration_formatted": analytics['summary'].get('duration_formatted', '0m 0s'),
+        "duration_minutes": duration_minutes,
+        "duration_seconds": duration_seconds,
+        "duration_formatted": duration_formatted,
         "generated_at": datetime.utcnow().isoformat(),
         
         "analytics": {
@@ -1406,3 +1588,29 @@ def generate_pdf_report(session, analytics):
     # This would use reportlab library
     # For now, return empty bytes (PDF generation can be added later)
     return b""
+@router.delete("/sessions/{session_id}")
+def delete_session(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Only teacher can delete
+    if current_user.role != "teacher":
+        raise HTTPException(403, "Only teacher can delete sessions")
+
+    session = db.query(EngagementSession).filter(
+        EngagementSession.id == session_id,
+        EngagementSession.teacher_id == current_user.id
+    ).first()
+
+    if not session:
+        raise HTTPException(404, "Session not found")
+
+    # ✅ Soft delete
+    session.is_deleted = True
+    db.commit()
+
+    return {
+        "status": "deleted",
+        "session_id": session_id
+    }

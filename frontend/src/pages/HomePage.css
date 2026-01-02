@@ -238,6 +238,7 @@
   overflow: hidden;
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
+  height: auto
 }
 
 
@@ -256,6 +257,7 @@
   height: auto;
   display: block;
   object-fit: cover;
+  object-position: bottom;
 }
 
 /* Make it edge-to-edge on small screens */

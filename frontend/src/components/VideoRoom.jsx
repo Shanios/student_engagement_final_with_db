@@ -15,8 +15,8 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
   const [muteStudents, setMuteStudents] = useState(false);
   const [disableCameras, setDisableCameras] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
-  const [ending, setEnding] = useState(false); // ✅ NEW: Track ending state
-  const [MLActive, setMLActive] = useState(false); // ✅ NEW: ML status
+  const [ending, setEnding] = useState(false);
+  const [MLActive, setMLActive] = useState(false);
 
   /* =======================
      TEACHER TOGGLES
@@ -48,7 +48,7 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
   };
 
   /* =======================
-     ✅ NEW: END SESSION BUTTON HANDLER
+     END SESSION HANDLER
      ======================= */
   const handleEndSession = async () => {
     if (!roomId) {
@@ -64,7 +64,7 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
         throw new Error("No authentication token found");
       }
 
-      console.log("🛑 Teacher ending session from video:", roomId);
+      console.log("🛑 Teacher ending session:", roomId);
 
       const res = await axios.post(
         `${API}/api/engagement/sessions/${roomId}/end`,
@@ -78,10 +78,9 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
         }
       );
 
-      console.log("✅ Session end response:", res.data);
+      console.log("✅ Session ended:", res.data);
       setSessionEnded(true);
 
-      // ✅ Redirect to report page after 2 seconds
       setTimeout(() => {
         console.log("📊 Redirecting to report page...");
         navigate(`/teacher/sessions/${roomId}/report`, { replace: true });
@@ -95,54 +94,80 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
   };
 
   /* =======================
-     STUDENT ATTENDANCE JOIN + ML START
+     ✅ NEW: HEARTBEAT (Keep Session Alive)
+     ======================= */
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token || !roomId) return;
+
+    // Send heartbeat every 5 seconds to keep session alive
+    const interval = setInterval(() => {
+      axios.post(
+        `${API}/api/engagement/sessions/${roomId}/heartbeat`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      .then(() => {
+        console.log("💓 Heartbeat sent");
+      })
+      .catch(err => {
+        console.warn("⚠️ Heartbeat error:", err.message);
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [roomId]);
+
+  /* =======================
+     STUDENT ATTENDANCE + ML START
      ======================= */
   useEffect(() => {
     if (userRole !== "audience") return;
 
     const token = localStorage.getItem("token");
     
-    // 1. Record attendance
+    // Record attendance
     axios.post(
       `${API}/api/attendance/join/${roomId}`,
       {},
       { headers: { Authorization: `Bearer ${token}` } }
-    );
-    console.log("🔍 Calling ML start URL:", `${API}/api/engagement/start-ml?session_id=${roomId}`);
-console.log("🔍 Session ID:", roomId);
-    // 2. Start ML process (fire-and-forget)
+    ).catch(err => console.warn("Attendance error:", err.message));
+
+    console.log("🚀 Starting ML for session:", roomId);
+
+    // Start ML process
     axios.post(
       `${API}/api/engagement/start-ml?session_id=${roomId}`,
       {},
       { 
         headers: { Authorization: `Bearer ${token}` },
-        timeout: 3000 
+        timeout: 15000 
       }
-    ).then(() => {
-      console.log("✅ ML started for session:", roomId);
+    )
+    .then(res => {
+      console.log("✅ ML started:", res.data);
       setMLActive(true);
-    }).catch(err => {
-      console.warn("⚠️ ML start failed (continuing anyway):", err.message);
+    })
+    .catch(err => {
+      console.warn("⚠️ ML start failed:", err.message);
       setMLActive(false);
     });
   }, [roomId, userRole]);
 
   /* =======================
-     ML STOP ON COMPONENT UNMOUNT
+     ML STOP ON UNMOUNT
      ======================= */
   useEffect(() => {
     return () => {
-      console.log("🧹 VideoRoom unmounted");
-      console.log("Navigating away from session:", roomId);
+      console.log("🧹 VideoRoom unmounting, stopping ML");
       
       if (userRole === "audience") {
         const token = localStorage.getItem("token");
-        // Stop ML - fire and forget
         axios.post(
           `${API}/api/engagement/stop-ml?session_id=${roomId}`,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
-        ).catch(err => console.log("ML cleanup on unmount:", err.message));
+        ).catch(err => console.warn("ML cleanup error:", err.message));
       }
     };
   }, [roomId, userRole]);
@@ -153,17 +178,16 @@ console.log("🔍 Session ID:", roomId);
   useEffect(() => {
     if (sessionEnded && userRole === "audience") {
       const token = localStorage.getItem("token");
-      // Stop ML - fire and forget
       axios.post(
         `${API}/api/engagement/stop-ml?session_id=${roomId}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
-      ).catch(err => console.log("ML cleanup on session end:", err.message));
+      ).catch(err => console.warn("ML stop error:", err.message));
     }
   }, [sessionEnded, userRole, roomId]);
 
   /* =======================
-     STUDENT ENFORCEMENT
+     STUDENT ENFORCEMENT (Mute/Camera Control)
      ======================= */
   useEffect(() => {
     if (userRole !== "audience" || !zpRef.current) return;
@@ -171,25 +195,29 @@ console.log("🔍 Session ID:", roomId);
     const token = localStorage.getItem("token");
 
     const interval = setInterval(async () => {
-      const res = await axios.get(
-        `${API}/api/engagement/sessions/${roomId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      try {
+        const res = await axios.get(
+          `${API}/api/engagement/sessions/${roomId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-      res.data.mute_students
-        ? zpRef.current.turnOffMicrophone()
-        : zpRef.current.turnOnMicrophone();
+        res.data.mute_students
+          ? zpRef.current.turnOffMicrophone()
+          : zpRef.current.turnOnMicrophone();
 
-      res.data.disable_student_cameras
-        ? zpRef.current.turnOffCamera()
-        : zpRef.current.turnOnCamera();
+        res.data.disable_student_cameras
+          ? zpRef.current.turnOffCamera()
+          : zpRef.current.turnOnCamera();
+      } catch (err) {
+        console.warn("Enforcement check error:", err.message);
+      }
     }, 3000);
 
     return () => clearInterval(interval);
   }, [roomId, userRole]);
 
   /* =======================
-     SYNC FLAGS FOR TEACHER UI
+     TEACHER UI SYNC
      ======================= */
   useEffect(() => {
     if (userRole !== "host") return;
@@ -197,13 +225,17 @@ console.log("🔍 Session ID:", roomId);
     const token = localStorage.getItem("token");
 
     const sync = async () => {
-      const res = await axios.get(
-        `${API}/api/engagement/sessions/${roomId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      try {
+        const res = await axios.get(
+          `${API}/api/engagement/sessions/${roomId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-      setMuteStudents(res.data.mute_students);
-      setDisableCameras(res.data.disable_student_cameras);
+        setMuteStudents(res.data.mute_students);
+        setDisableCameras(res.data.disable_student_cameras);
+      } catch (err) {
+        console.warn("Sync error:", err.message);
+      }
     };
 
     sync();
@@ -212,7 +244,45 @@ console.log("🔍 Session ID:", roomId);
   }, [roomId, userRole]);
 
   /* =======================
-     VIDEO INIT
+     SESSION END POLLING
+     ======================= */
+  useEffect(() => {
+    if (sessionEnded) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await axios.get(
+          `${API}/api/engagement/sessions/${roomId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (res.data.ended_at) {
+          console.log("🎯 Session ended by teacher");
+          setSessionEnded(true);
+
+          if (userRole === "host") {
+            setTimeout(() => {
+              navigate(`/teacher/sessions/${roomId}/report`, { replace: true });
+            }, 1000);
+          } else {
+            setTimeout(() => {
+              navigate("/student/dashboard", { replace: true });
+            }, 1000);
+          }
+        }
+      } catch (err) {
+        console.warn("Poll error:", err.message);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [roomId, userRole, sessionEnded, navigate]);
+
+  /* =======================
+     VIDEO INITIALIZATION
      ======================= */
   useEffect(() => {
     if (!containerRef.current) return;
@@ -237,33 +307,32 @@ console.log("🔍 Session ID:", roomId);
       turnOnCameraWhenJoining: isTeacher,
       turnOnMicrophoneWhenJoining: isTeacher,
 
-      showMyCameraToggleButton: isTeacher,
-      showMyMicrophoneToggleButton: isTeacher,
-      showScreenSharingButton: isTeacher,
+      // ✅ FIXED: 
+      // - Teachers: Can toggle everything
+      // - Students: Can toggle camera and microphone
+      // - Only teacher can share screen
+      showMyCameraToggleButton: true,              // Both teacher & student
+      showMyMicrophoneToggleButton: true,          // Both teacher & student
+      showScreenSharingButton: isTeacher,          // Only teacher
 
       showUserList: false,
       showTextChat: true,
-      onJoinRoom: () => {
-        console.log("✅ Zego joined room");
-      },
-      onLeaveRoom: () => {
-        console.log("🚨 Zego onLeaveRoom triggered");
-        console.log("Role at leave:", userRole);
-        console.log("Session at leave:", roomId);
 
-        if (userRole === "host") {
-          console.log("📡 Host left video → Backend will decide next action");
-        } else {
-          console.log("👨‍🎓 Student left video → Will check backend session state");
+      onJoinRoom: () => {
+        console.log("✅ Zego room joined");
+      },
+
+      onLeaveRoom: () => {
+        console.log("🚨 User left video room");
+
+        if (userRole === "audience") {
           setMLActive(false);
-          // Stop ML when student leaves video room
           const token = localStorage.getItem("token");
-          // Stop ML - fire and forget
           axios.post(
             `${API}/api/engagement/stop-ml?session_id=${roomId}`,
             {},
             { headers: { Authorization: `Bearer ${token}` } }
-          ).catch(err => console.log("ML cleanup on leave:", err.message));
+          ).catch(err => console.warn("Cleanup error:", err.message));
         }
       },
     });
@@ -273,67 +342,6 @@ console.log("🔍 Session ID:", roomId);
       zpRef.current = null;
     };
   }, [roomId, userId, userName, userRole]);
-
-  /* =======================
-     ✅ POLL SESSION END (TEACHER + STUDENT)
-     ======================= */
-  useEffect(() => {
-    if (sessionEnded) return;
-
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    const interval = setInterval(async () => {
-      try {
-        const res = await axios.get(
-          `${API}/api/engagement/sessions/${roomId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        if (res.data.ended_at) {
-          console.log("🎯 Backend detected session ended:", res.data.ended_at);
-          setSessionEnded(true);
-
-          if (userRole === "host") {
-            console.log("📊 Redirecting teacher to report page...");
-            setTimeout(() => {
-              navigate(`/teacher/sessions/${roomId}/report`, { replace: true });
-            }, 1000);
-          } else {
-            console.log("🚪 Redirecting student to dashboard...");
-            setTimeout(() => {
-              navigate("/student/dashboard", { replace: true });
-            }, 1000);
-          }
-        }
-      } catch (err) {
-        console.warn("⚠️ Session poll error:", err.message);
-      }
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [roomId, userRole, sessionEnded, navigate]);
-
-  /* =======================
-     AUTO EXIT FOR STUDENT (REDUNDANCY)
-     ======================= */
-  useEffect(() => {
-    if (userRole !== "audience") return;
-
-    const token = localStorage.getItem("token");
-    const interval = setInterval(async () => {
-      const res = await axios.get(
-        `${API}/api/engagement/sessions/${roomId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (res.data.ended_at) {
-        navigate("/student/dashboard", { replace: true });
-      }
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [roomId, userRole, navigate]);
 
   return (
     <>
@@ -351,7 +359,6 @@ console.log("🔍 Session ID:", roomId);
             maxWidth: "300px",
           }}
         >
-          {/* Mute & Camera Buttons */}
           <div style={{ display: "flex", gap: "12px" }}>
             <button
               onClick={toggleMuteStudents}
@@ -386,7 +393,6 @@ console.log("🔍 Session ID:", roomId);
             </button>
           </div>
 
-          {/* ✅ NEW: End Session Button */}
           <button
             onClick={handleEndSession}
             disabled={ending || sessionEnded}
@@ -406,7 +412,6 @@ console.log("🔍 Session ID:", roomId);
             {ending ? "⏳ Ending Session..." : "🛑 End Session"}
           </button>
 
-          {/* Show status message */}
           {sessionEnded && (
             <div
               style={{
@@ -425,7 +430,7 @@ console.log("🔍 Session ID:", roomId);
         </div>
       )}
 
-      {/* ✅ ML STATUS BADGE FOR STUDENTS */}
+      {/* ML STATUS BADGE */}
       {userRole === "audience" && MLActive && (
         <div style={{
           position: "absolute",
@@ -453,7 +458,6 @@ console.log("🔍 Session ID:", roomId);
         </div>
       )}
 
-      {/* ✅ PULSE ANIMATION CSS */}
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; }

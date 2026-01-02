@@ -54,6 +54,16 @@ def verify_camera_device(
     x_device_key: str = Header(None),
     request: Request = None
 ):
+    print("🔐 verify_camera_device STARTED")
+
+    device_key = x_device_key
+    if not device_key:
+        print("❌ X-DEVICE-KEY MISSING")
+        raise HTTPException(status_code=401, detail="Missing device key")
+
+    print(f"🔑 Device key received: {device_key[:6]}***")
+
+    print("✅ verify_camera_device PASSED")
     """
     ✅ HARDENED: Validate camera device key + IP address.
     

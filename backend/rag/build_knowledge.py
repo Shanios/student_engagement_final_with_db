@@ -2,8 +2,9 @@ import os
 from pypdf import PdfReader
 from sentence_transformers import SentenceTransformer
 import numpy as np
-
-NOTES_FOLDER = "../notes"
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent        # backend/rag
+NOTES_FOLDER = (BASE_DIR / ".." / ".." / "notes").resolve()
 CHUNK_SIZE = 2500  # correct chunk size
 
 model = SentenceTransformer("all-MiniLM-L6-v2")

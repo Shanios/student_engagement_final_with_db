@@ -134,6 +134,23 @@ export default function SessionList() {
       </div>
     );
   }
+const handleDeleteSession = async (sessionId) => {
+  if (!window.confirm("Are you sure you want to delete this session?")) return;
+
+  try {
+    const token = localStorage.getItem("token");
+
+    await axios.delete(
+      `http://127.0.0.1:8000/api/engagement/sessions/${sessionId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    // Remove from UI
+    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+  } catch (err) {
+    setError("Failed to delete session");
+  }
+};
 
   return (
     <div
@@ -232,7 +249,7 @@ export default function SessionList() {
               </p>
 
               <p style={{ margin: "8px 0", color: "#10b981", fontSize: "14px", fontWeight: "600" }}>
-                👥 Students Attended: {session.point_count}
+                👥 Students Attended: {session.attendance_count}
               </p>
 
               <p style={{ margin: "8px 0", color: "#60a5fa", fontSize: "14px" }}>
@@ -276,7 +293,7 @@ export default function SessionList() {
                 >
                   👁️ View Details
                 </button>
-
+                
                 <button
                   onClick={() => handleDownloadCsv(session.id)}
                   disabled={downloadingCsv}
@@ -310,6 +327,22 @@ export default function SessionList() {
                 >
                   {sendingEmail ? "⏳ Sending..." : "📧 Email Report"}
                 </button>
+                <button
+  onClick={() => handleDeleteSession(session.id)}
+  style={{
+    padding: "8px 12px",
+    fontSize: "12px",
+    background: "#dc2626",
+    color: "white",
+    border: "none",
+    borderRadius: "4px",
+    cursor: "pointer",
+    fontWeight: "600",
+  }}
+>
+  🗑️ Delete
+</button>
+
               </div>
             </div>
           ))}

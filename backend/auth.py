@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 SECRET_KEY = os.getenv("JWT_SECRET", "dev-secret-key-change-me")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 15  # ✅ HARDENED: Reduced from 60 to 15 minutes
+ACCESS_TOKEN_EXPIRE_MINUTES = 60  # ✅ HARDENED: Reduced from 60 to 30 minutes
 REFRESH_TOKEN_EXPIRE_DAYS = 7  # ✅ NEW: Refresh token valid for 7 days
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

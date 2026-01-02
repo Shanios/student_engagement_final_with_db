@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 
-import poster1 from "../assets/posters/poster1.png";
-import poster2 from "../assets/posters/poster2.png";
+import poster1 from "../assets/posters/poster1.jpeg";
+import poster2 from "../assets/posters/poster2.jpeg";
 
 
 // Add / remove posters as you like

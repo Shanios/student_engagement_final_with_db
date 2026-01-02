@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
 from datetime import datetime
 import csv
 from io import StringIO
@@ -17,7 +17,6 @@ from models import EngagementSession, User, Attendance
 from auth import get_current_user
 from fastapi.responses import StreamingResponse
 
-# ✅ Load environment variables
 load_dotenv()
 
 # ==================== EMAIL CONFIGURATION ====================
@@ -26,7 +25,6 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SENDER_EMAIL = os.getenv("SENDER_EMAIL")
 SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
 
-# Validate credentials
 if not SENDER_EMAIL or not SENDER_PASSWORD:
     print("⚠️ WARNING: Email credentials not configured in .env")
 
@@ -143,10 +141,18 @@ def mark_join(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Student joins a session."""
+    """
+    ✅ FIXED: Student joins a session.
+    
+    Behavior:
+    1. First join: Create attendance record
+    2. Rejoin (after leave): Update left_at=None
+    3. Already present: Return status (no change)
+    """
     if current_user.role != "student":
         raise HTTPException(403, "Only students can join sessions")
 
+    # 1️⃣ Verify session exists and is active
     session = db.query(EngagementSession).filter(
         EngagementSession.id == session_id
     ).first()
@@ -160,7 +166,15 @@ def mark_join(
     if session.is_locked:
         raise HTTPException(403, "Session is locked by teacher")
 
-    try:
+    # 2️⃣ Check if already joined
+    attendance = db.query(Attendance).filter(
+        Attendance.session_id == session_id,
+        Attendance.student_id == current_user.id
+    ).first()
+
+    # 3️⃣ Handle different states
+    if attendance is None:
+        # ✅ First join: Create new record
         attendance = Attendance(
             session_id=session_id,
             student_id=current_user.id,
@@ -169,7 +183,7 @@ def mark_join(
         db.add(attendance)
         db.commit()
         db.refresh(attendance)
-
+        
         print(f"✅ Student {current_user.id} joined session {session_id}")
 
         return {
@@ -177,26 +191,35 @@ def mark_join(
             "session_id": session_id,
             "student_id": current_user.id,
             "joined_at": attendance.joined_at.isoformat(),
+            "message": "Successfully joined session"
         }
 
-    except IntegrityError:
-        db.rollback()
-        existing = db.query(Attendance).filter(
-            Attendance.session_id == session_id,
-            Attendance.student_id == current_user.id
-        ).first()
+    elif attendance.left_at is not None:
+        # ✅ Rejoin: Mark as present again
+        attendance.left_at = None
+        attendance.joined_at = datetime.utcnow()  # Reset join time
+        db.commit()
+        db.refresh(attendance)
+        
+        print(f"🔄 Student {current_user.id} rejoined session {session_id}")
 
         return {
-            "status": "already_joined",
+            "status": "rejoined",
             "session_id": session_id,
             "student_id": current_user.id,
-            "joined_at": existing.joined_at.isoformat() if existing else None,
+            "joined_at": attendance.joined_at.isoformat(),
+            "message": "Successfully rejoined session"
         }
 
-    except Exception as err:
-        db.rollback()
-        print(f"❌ Join error: {err}")
-        raise HTTPException(500, "Failed to record attendance")
+    else:
+        # ✅ Already present: No change needed
+        return {
+            "status": "already_present",
+            "session_id": session_id,
+            "student_id": current_user.id,
+            "joined_at": attendance.joined_at.isoformat(),
+            "message": "Student is already present in session"
+        }
 
 
 # ==================== STUDENT LEAVE ====================
@@ -207,10 +230,17 @@ def mark_leave(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Student leaves a session."""
+    """
+    ✅ FIXED: Student leaves a session.
+
+    - Calculates attended duration
+    - Accumulates total duration
+    - Marks student as left
+    """
     if current_user.role != "student":
         raise HTTPException(403, "Only students can leave sessions")
 
+    # 1️⃣ Find attendance record
     attendance = db.query(Attendance).filter(
         Attendance.session_id == session_id,
         Attendance.student_id == current_user.id
@@ -221,23 +251,107 @@ def mark_leave(
             "status": "not_joined",
             "session_id": session_id,
             "student_id": current_user.id,
+            "message": "Student was not in this session"
         }
 
-    if not attendance.left_at:
-        attendance.left_at = datetime.utcnow()
-        db.commit()
+    # 2️⃣ Only update if student is currently present
+    if attendance.left_at is None:
+        now = datetime.utcnow()
 
-        print(f"👋 Student {current_user.id} left session {session_id}")
+        # ✅ CALCULATE DURATION
+        session_seconds = int((now - attendance.joined_at).total_seconds())
+
+        # ✅ ACCUMULATE TOTAL TIME
+        attendance.total_duration_seconds += session_seconds
+
+        # ✅ MARK AS LEFT
+        attendance.left_at = now
+
+        db.commit()
+        db.refresh(attendance)
+
+        print(
+            f"👋 Student {current_user.id} left session {session_id} "
+            f"(+{session_seconds}s, total={attendance.total_duration_seconds}s)"
+        )
 
     return {
         "status": "left",
         "session_id": session_id,
         "student_id": current_user.id,
         "left_at": attendance.left_at.isoformat(),
+        "total_duration_seconds": attendance.total_duration_seconds,
+        "message": "Successfully left session"
     }
 
 
-# ==================== VIEW PARTICIPANTS ====================
+# ==================== ATTENDANCE COUNT (FIXED) ====================
+
+@router.get("/count/{session_id}")
+def get_attendance_count(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(403, "Only teacher can view attendance")
+
+    # 1️⃣ Get session
+    session = db.query(EngagementSession).filter(
+        EngagementSession.id == session_id
+    ).first()
+
+    if not session:
+        raise HTTPException(404, "Session not found")
+
+    # 2️⃣ Calculate session duration (seconds)
+    end_time = session.ended_at or datetime.utcnow()
+    session_duration = (end_time - session.started_at).total_seconds()
+
+    if session_duration <= 0:
+        return {
+            "session_id": session_id,
+            "valid_attendance": 0,
+            "currently_present": 0,
+        }
+
+    # 3️⃣ Get attendance records
+    records = db.query(Attendance).filter(
+        Attendance.session_id == session_id
+    ).all()
+
+    valid_attendance = 0
+    currently_present = 0
+
+    for a in records:
+        # Base duration
+        duration = 0
+
+        # Case 1: Student already left
+        if a.left_at:
+            duration = (a.left_at - a.joined_at).total_seconds()
+        else:
+            # Case 2: Student still present
+            duration = (datetime.utcnow() - a.joined_at).total_seconds()
+            currently_present += 1
+
+        # 4️⃣ Apply 15% rule
+        percentage = (duration / session_duration) * 100
+
+        if percentage >= 15:
+            valid_attendance += 1
+
+    print(f"\n📊 Correct Attendance Count for Session {session_id}")
+    print(f"   Valid Attendance (≥15%): {valid_attendance}")
+    print(f"   Currently Present: {currently_present}\n")
+
+    return {
+        "session_id": session_id,
+        "valid_attendance": valid_attendance,
+        "currently_present": currently_present,
+    }
+
+# ==================== VIEW PARTICIPANTS (DETAILED) ====================
 
 @router.get("/session/{session_id}/participants")
 def get_participants(
@@ -245,7 +359,7 @@ def get_participants(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get all participants in a session."""
+    """Get all participants in a session with details."""
     if current_user.role != "teacher":
         raise HTTPException(403, "Only teacher can view participants")
 
@@ -256,6 +370,7 @@ def get_participants(
     if not session:
         raise HTTPException(404, "Session not found")
 
+    # Join Attendance with User
     records = (
         db.query(Attendance, User)
         .join(User, Attendance.student_id == User.id)
@@ -268,60 +383,31 @@ def get_participants(
     for attendance, user in records:
         is_active = attendance.left_at is None
         
+        duration_seconds = None
+        if attendance.left_at:
+            duration_seconds = int(
+                (attendance.left_at - attendance.joined_at).total_seconds()
+            )
+        
         participants.append({
             "user_id": f"student-{user.id}",
+            "email": user.email,
             "role": "audience",
-            "status": "joined" if is_active else "left",
+            "status": "present" if is_active else "left",
             "joined_at": attendance.joined_at.isoformat(),
             "left_at": attendance.left_at.isoformat() if attendance.left_at else None,
-            "duration_seconds": int(
-                (attendance.left_at - attendance.joined_at).total_seconds()
-            ) if attendance.left_at else None,
+            "duration_seconds": duration_seconds,
         })
 
     return {
         "session_id": session_id,
         "count": len(participants),
+        "currently_present": sum(1 for p in participants if p["status"] == "present"),
         "participants": participants,
     }
 
 
-# ==================== ATTENDANCE COUNT ====================
-
-@router.get("/count/{session_id}")
-def get_attendance_count(
-    session_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Get live attendance count."""
-    if current_user.role != "teacher":
-        raise HTTPException(403, "Only teacher can view attendance")
-
-    session = db.query(EngagementSession).filter(
-        EngagementSession.id == session_id
-    ).first()
-
-    if not session:
-        raise HTTPException(404, "Session not found")
-
-    total_joined = db.query(Attendance).filter(
-        Attendance.session_id == session_id
-    ).count()
-
-    currently_present = db.query(Attendance).filter(
-        Attendance.session_id == session_id,
-        Attendance.left_at.is_(None)
-    ).count()
-
-    return {
-        "session_id": session_id,
-        "total_joined": total_joined,
-        "currently_present": currently_present,
-    }
-
-
-# ==================== GET ATTENDEES ====================
+# ==================== GET ATTENDEES (DETAILED LIST) ====================
 
 @router.get("/session/{session_id}/students")
 def get_attendees(
@@ -331,50 +417,7 @@ def get_attendees(
 ):
     """Get detailed attendee list."""
     if current_user.role != "teacher":
-        raise HTTPException(403)
-
-    records = (
-        db.query(Attendance, User)
-        .join(User, Attendance.student_id == User.id)
-        .filter(Attendance.session_id == session_id)
-        .all()
-    )
-
-    students = []
-    for attendance, user in records:
-        duration = None
-        if attendance.left_at:
-            duration = int(
-                (attendance.left_at - attendance.joined_at).total_seconds()
-            )
-
-        students.append({
-            "id": user.id,
-            "email": user.email,
-            "joined_at": attendance.joined_at.isoformat(),
-            "left_at": attendance.left_at.isoformat() if attendance.left_at else None,
-            "duration_seconds": duration,
-            "is_present": attendance.left_at is None,
-        })
-
-    return {
-        "session_id": session_id,
-        "count": len(students),
-        "students": students,
-    }
-
-
-# ==================== DOWNLOAD CSV ====================
-
-@router.get("/session/{session_id}/download")
-def download_attendance(
-    session_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Download attendance as CSV."""
-    if current_user.role != "teacher":
-        raise HTTPException(403)
+        raise HTTPException(403, "Only teacher can view attendees")
 
     records = (
         db.query(Attendance, User)
@@ -383,6 +426,60 @@ def download_attendance(
         .order_by(Attendance.joined_at.asc())
         .all()
     )
+
+    students = []
+    for attendance, user in records:
+        duration_seconds = None
+        if attendance.left_at:
+            duration_seconds = int(
+                (attendance.left_at - attendance.joined_at).total_seconds()
+            )
+
+        students.append({
+            "id": user.id,
+            "email": user.email,
+            "joined_at": attendance.joined_at.isoformat(),
+            "left_at": attendance.left_at.isoformat() if attendance.left_at else None,
+            "duration_seconds": duration_seconds,
+            "is_present": attendance.left_at is None,
+        })
+
+    return {
+        "session_id": session_id,
+        "count": len(students),
+        "currently_present": sum(1 for s in students if s["is_present"]),
+        "students": students,
+    }
+
+
+# ==================== DOWNLOAD CSV ====================
+@router.get("/session/{session_id}/download")
+def download_attendance(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(403, "Only teacher can download attendance")
+
+    session = db.query(EngagementSession).filter(
+        EngagementSession.id == session_id
+    ).first()
+
+    if not session or not session.ended_at:
+        raise HTTPException(400, "Session must be ended")
+
+    records = (
+        db.query(Attendance, User)
+        .join(User, Attendance.student_id == User.id)
+        .filter(Attendance.session_id == session_id)
+        .order_by(Attendance.joined_at.asc())
+        .all()
+    )
+
+    session_duration_sec = (
+        session.ended_at - session.started_at
+    ).total_seconds()
 
     output = StringIO()
     writer = csv.writer(output)
@@ -396,20 +493,20 @@ def download_attendance(
     ])
 
     for attendance, user in records:
-        duration_min = None
-        status = "Present"
+        end_time = attendance.left_at or session.ended_at
+        duration_sec = (end_time - attendance.joined_at).total_seconds()
+        duration_min = round(duration_sec / 60, 2)
 
-        if attendance.left_at:
-            duration_sec = (attendance.left_at - attendance.joined_at).total_seconds()
-            duration_min = round(duration_sec / 60, 2)
-            status = "Left"
+        attendance_percentage = (duration_sec / session_duration_sec) * 100
+
+        status = "Present" if attendance_percentage >= 15 else "Absent"
 
         writer.writerow([
             user.id,
             user.email,
             attendance.joined_at.strftime("%Y-%m-%d %H:%M:%S"),
-            attendance.left_at.strftime("%Y-%m-%d %H:%M:%S") if attendance.left_at else "-",
-            duration_min if duration_min else "-",
+            end_time.strftime("%Y-%m-%d %H:%M:%S"),
+            duration_min,
             status,
         ])
 
@@ -432,18 +529,32 @@ def send_attendance_email_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Send attendance report to teacher's email."""
-    
+    """Send attendance report to teacher's email (15% rule applied)."""
+
+    # ✅ STEP 0: Authorization
     if current_user.role != "teacher":
         raise HTTPException(403, "Only teacher can request attendance email")
-    
+
+    # ✅ STEP 1: Fetch session
     session = db.query(EngagementSession).filter(
         EngagementSession.id == session_id
     ).first()
-    
+
     if not session:
         raise HTTPException(404, "Session not found")
-    
+
+    if session.ended_at is None:
+        raise HTTPException(400, "Session must be ended before sending report")
+
+    # ✅ STEP 2: Calculate total session duration (ONCE)
+    session_duration_sec = (
+        session.ended_at - session.started_at
+    ).total_seconds()
+
+    if session_duration_sec <= 0:
+        raise HTTPException(400, "Invalid session duration")
+
+    # ✅ STEP 3: Fetch attendance records
     records = (
         db.query(Attendance, User)
         .join(User, Attendance.student_id == User.id)
@@ -451,33 +562,40 @@ def send_attendance_email_endpoint(
         .order_by(Attendance.joined_at.asc())
         .all()
     )
-    
+
     if not records:
         raise HTTPException(400, "No attendance records for this session")
-    
-    # Format attendance data
+
+    # ✅ STEP 4: Build attendance data WITH 15% RULE
     attendance_data = []
+
     for attendance, user in records:
-        duration_min = None
-        status = "Present"
-        
-        if attendance.left_at:
-            duration_sec = (attendance.left_at - attendance.joined_at).total_seconds()
-            duration_min = round(duration_sec / 60, 2)
-            status = "Left"
-        
+        # Use left_at OR session end time
+        end_time = attendance.left_at or session.ended_at
+
+        duration_sec = (end_time - attendance.joined_at).total_seconds()
+        duration_min = round(duration_sec / 60, 2)
+
+        attendance_percentage = (duration_sec / session_duration_sec) * 100
+
+        status = "Present" if attendance_percentage >= 15 else "Absent"
+
         attendance_data.append({
             "id": user.id,
             "email": user.email,
             "joined_at": attendance.joined_at.strftime("%Y-%m-%d %H:%M:%S"),
-            "left_at": attendance.left_at.strftime("%Y-%m-%d %H:%M:%S") if attendance.left_at else "-",
+            "left_at": end_time.strftime("%Y-%m-%d %H:%M:%S"),
             "duration_min": duration_min,
             "status": status,
         })
-    
-    # Send email
-    send_attendance_email(current_user.email, session.title, attendance_data)
-    
+
+    # ✅ STEP 5: Send email
+    send_attendance_email(
+        current_user.email,
+        session.title,
+        attendance_data
+    )
+
     return {
         "status": "success",
         "message": f"Attendance report sent to {current_user.email}",

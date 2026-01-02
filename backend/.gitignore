@@ -28,11 +28,6 @@ backend/node_modules/
 backend/__pycache__/
 backend/*.log
 
-# ======================
-# ENGAGEMENT / ML
-# ======================
-backend/engagement/
-engagement/
 
 # ======================
 # EXECUTABLES

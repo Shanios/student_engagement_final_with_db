@@ -50,7 +50,7 @@ const role = user?.role; // "teacher" | "student"
           </div>
 
           <NavLink to="/notes" className={linkClass}>
-            Upload Notes
+            Notes
           </NavLink>
           {role === "teacher" && (
   <>

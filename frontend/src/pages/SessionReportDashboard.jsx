@@ -456,7 +456,11 @@ export default function SessionReportDashboard() {
         <div className="report-footer">
           <div className="footer-info">
             <p>Session ID: <code>{sessionId}</code></p>
-            <p>Generated: {new Date(report.generated_at).toLocaleString()}</p>
+           <p>
+  Generated:{" "}
+  {new Date(report.generated_at + "Z").toLocaleString()}
+</p>
+
           </div>
           <button onClick={() => navigate('/teacher/sessions')} className="btn btn-secondary">
             View All Sessions

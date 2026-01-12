@@ -593,26 +593,95 @@ def end_session(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """
+    ✅ FIXED: End session AND auto-terminate all active students
+    
+    When teacher ends session:
+    1. Mark session as ended
+    2. Find all students still present (left_at IS NULL)
+    3. Set their left_at = teacher_end_time
+    4. Calculate their duration
+    5. Commit everything in ONE transaction
+    """
+    
+    print(f"\n{'='*80}")
+    print(f"🛑 END SESSION REQUESTED")
+    print(f"   Session ID: {session_id}")
+    print(f"   Teacher ID: {current_user.id}")
+    print(f"{'='*80}\n")
+    
+    # ✅ Authorization check
     if current_user.role != "teacher":
+        print(f"❌ User {current_user.id} is not a teacher (role: {current_user.role})")
         raise HTTPException(status_code=403, detail="Only teacher can end session")
 
+    # ✅ Get session
+    print(f"📍 STEP 1: Fetching session {session_id}")
     session = db.query(EngagementSession).filter(
         EngagementSession.id == session_id
     ).first()
 
     if not session:
+        print(f"❌ Session {session_id} not found")
         raise HTTPException(status_code=404, detail="Session not found")
 
+    print(f"✅ Session found: '{session.title}'")
+    print(f"   Started at: {session.started_at}")
+    print(f"   Current ended_at: {session.ended_at}")
+
+    # ✅ Check if already ended
     if session.ended_at is not None:
+        print(f"⚠️  Session already ended at {session.ended_at}")
         return {"status": "already_ended", "session_id": session_id}
 
-    session.ended_at = datetime.utcnow()
-    db.commit()
+    # ✅ Set session end time
+    end_time = datetime.utcnow()
+    session.ended_at = end_time
+    print(f"✅ Session marked as ended at: {end_time}")
+
+    # ✅ STEP 2: Auto-end all active students
+    print(f"\n📍 STEP 2: Auto-terminating active students")
+    active_students = db.query(Attendance).filter(
+        Attendance.session_id == session_id,
+        Attendance.left_at.is_(None)  # ✅ Only students still present
+    ).all()
+
+    print(f"   Found {len(active_students)} active students")
+
+    for idx, attendance in enumerate(active_students, 1):
+        # Calculate duration
+        duration_seconds = int((end_time - attendance.joined_at).total_seconds())
+        
+        # Update student record
+        attendance.left_at = end_time
+        attendance.total_duration_seconds = duration_seconds
+        
+        print(f"   [{idx}] Student {attendance.student_id}:")
+        print(f"        Joined: {attendance.joined_at}")
+        print(f"        Left: {end_time}")
+        print(f"        Duration: {duration_seconds} seconds ({duration_seconds/60:.1f} min)")
+
+    # ✅ STEP 3: Commit everything in ONE transaction
+    print(f"\n📍 STEP 3: Committing transaction...")
+    try:
+        db.add(session)  # Ensure session is tracked
+        db.commit()  # ✅ ONE commit for session + all students
+        print(f"✅ Transaction committed successfully!")
+        print(f"   Session ended: 1 record")
+        print(f"   Students terminated: {len(active_students)} records")
+    except Exception as e:
+        print(f"❌ Commit failed: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to end session: {str(e)}")
+
+    print(f"{'='*80}\n")
     
     return {
         "status": "ended",
         "session_id": session_id,
         "ended_at": session.ended_at.isoformat(),
+        "students_terminated": len(active_students),
+        "message": f"Session ended. {len(active_students)} active students were auto-terminated."
     }
 @router.post("/sessions/{session_id}/heartbeat")
 def heartbeat(

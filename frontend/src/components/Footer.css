@@ -1,0 +1,570 @@
+/* ==================== PROFESSIONAL FOOTER ==================== */
+
+.footer-pro {
+  position: relative;
+  background: linear-gradient(180deg, #0f172a 0%, #1a1f35 50%, #0d1117 100%);
+  border-top: 1px solid rgba(96, 165, 250, 0.1);
+  color: #e2e8f0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
+  overflow: hidden;
+}
+
+/* ==================== BACKGROUND ANIMATION ==================== */
+
+.footer-bg-animation {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.footer-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.1;
+}
+
+.footer-glow-1 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, #3b82f6, transparent);
+  bottom: 10%;
+  left: -100px;
+  animation: float-slow 15s ease-in-out infinite;
+}
+
+.footer-glow-2 {
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, #a855f7, transparent);
+  top: 20%;
+  right: -80px;
+  animation: float-slow 18s ease-in-out infinite;
+  animation-delay: 3s;
+}
+
+@keyframes float-slow {
+  0%, 100% {
+    transform: translate(0px, 0px);
+  }
+  50% {
+    transform: translate(40px, 40px);
+  }
+}
+
+/* ==================== FOOTER CONTENT ==================== */
+
+.footer-content {
+  position: relative;
+  z-index: 10;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 60px 32px;
+}
+
+/* ==================== TOP SECTION ==================== */
+
+.footer-top-pro {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1.2fr;
+  gap: 40px;
+  margin-bottom: 40px;
+  animation: slideInUp 0.8s ease-out;
+}
+
+/* ==================== BRANDING SECTION ==================== */
+
+.footer-brand-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.footer-logo-pro {
+  flex-shrink: 0;
+}
+
+.logo-icon {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: white;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.logo-icon::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: shine 3s infinite;
+}
+
+.footer-logo-pro:hover .logo-icon {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 36px rgba(168, 85, 247, 0.4);
+}
+
+@keyframes shine {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.footer-text-block {
+  flex: 1;
+}
+
+.footer-brand-name {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin: 0 0 4px;
+  background: linear-gradient(135deg, #60a5fa 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.05em;
+}
+
+.footer-tagline {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  margin: 0 0 2px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.footer-mission {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 0;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* ==================== QUICK LINKS SECTION ==================== */
+
+.footer-links-section,
+.footer-contact-section,
+.footer-social-pro {
+  animation: slideInUp 0.8s ease-out;
+}
+
+.footer-links-section {
+  animation-delay: 0.1s;
+}
+
+.footer-contact-section {
+  animation-delay: 0.2s;
+}
+
+.footer-social-pro {
+  animation-delay: 0.3s;
+}
+
+.footer-section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0 0 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  position: relative;
+  padding-bottom: 8px;
+}
+
+.footer-section-title::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 30px;
+  height: 2px;
+  background: linear-gradient(90deg, #60a5fa, transparent);
+  border-radius: 999px;
+}
+
+.footer-links-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footer-link {
+  color: #cbd5e1;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.footer-link::before {
+  content: "→";
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: all 0.3s ease;
+  font-weight: 600;
+  color: #60a5fa;
+}
+
+.footer-link:hover {
+  color: #60a5fa;
+  transform: translateX(4px);
+}
+
+.footer-link:hover::before {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* ==================== CONTACT SECTION ==================== */
+
+.footer-contact-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+  transition: all 0.3s ease;
+  padding: 6px 0;
+}
+
+.contact-icon {
+  color: #60a5fa;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.footer-contact-item:hover {
+  color: #60a5fa;
+  transform: translateX(4px);
+}
+
+.footer-contact-item:hover .contact-icon {
+  transform: scale(1.2);
+}
+
+/* ==================== SOCIAL ICONS SECTION ==================== */
+
+.footer-social-icons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.footer-icon-pro {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+  font-size: 1.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-icon-pro::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.5s, height 0.5s;
+}
+
+.footer-icon-pro:hover::before {
+  width: 100px;
+  height: 100px;
+}
+
+/* Social brand colors */
+.footer-icon-pro.facebook {
+  background: linear-gradient(135deg, #1877f2 0%, #0a66c2 100%);
+}
+
+.footer-icon-pro.linkedin {
+  background: linear-gradient(135deg, #0077b5 0%, #004182 100%);
+}
+
+.footer-icon-pro.instagram {
+  background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+}
+
+.footer-icon-pro.twitter {
+  background: linear-gradient(135deg, #1da1f2 0%, #1a91da 100%);
+}
+
+.footer-icon-pro.youtube {
+  background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+}
+
+.footer-icon-pro {
+  position: relative;
+  z-index: 1;
+  transform: translateY(0);
+}
+
+.footer-icon-pro:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 28px rgba(96, 165, 250, 0.3);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* ==================== DIVIDER ==================== */
+
+.footer-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(96, 165, 250, 0.2), transparent);
+  margin: 40px 0;
+  animation: slideInRight 0.8s ease-out 0.2s both;
+}
+
+/* ==================== BOTTOM SECTION ==================== */
+
+.footer-bottom-pro {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  animation: slideInUp 0.8s ease-out 0.3s both;
+}
+
+.footer-copyright-text {
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.copyright-highlight {
+  background: linear-gradient(135deg, #60a5fa 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+}
+
+.footer-legal-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.legal-link {
+  color: #cbd5e1;
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.legal-link::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: linear-gradient(90deg, #60a5fa, #a855f7);
+  transition: width 0.3s ease;
+}
+
+.legal-link:hover {
+  color: #60a5fa;
+}
+
+.legal-link:hover::after {
+  width: 100%;
+}
+
+.separator {
+  color: #475569;
+}
+
+/* ==================== ANIMATIONS ==================== */
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+
+@media (max-width: 1024px) {
+  .footer-top-pro {
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+  }
+
+  .footer-content {
+    padding: 50px 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .footer-top-pro {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .footer-bottom-pro {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .footer-legal-links {
+    justify-content: center;
+  }
+
+  .footer-brand-section {
+    justify-content: center;
+  }
+
+  .footer-links-section,
+  .footer-contact-section,
+  .footer-social-pro {
+    text-align: center;
+  }
+
+  .footer-section-title::after {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .footer-copyright-text {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .footer-content {
+    padding: 40px 16px;
+  }
+
+  .footer-top-pro {
+    gap: 20px;
+  }
+
+  .footer-brand-name {
+    font-size: 1.2rem;
+  }
+
+  .footer-social-icons {
+    justify-content: center;
+  }
+
+  .footer-icon-pro {
+    width: 40px;
+    height: 40px;
+  }
+
+  .footer-icon-pro svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .footer-bottom-pro {
+    gap: 12px;
+  }
+
+  .footer-copyright-text {
+    font-size: 0.8rem;
+  }
+
+  .legal-link {
+    font-size: 0.8rem;
+  }
+
+  .separator {
+    margin: 0 6px;
+  }
+}
+
+/* ==================== DARK MODE OPTIMIZATIONS ==================== */
+
+@supports (backdrop-filter: blur(1px)) {
+  .footer-pro {
+    backdrop-filter: blur(5px);
+  }
+}
+
+/* Smooth transitions */
+* {
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-duration: 0.3s;
+  transition-timing-function: ease;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: more) {
+  .footer-icon-pro {
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .footer-link {
+    text-decoration: underline;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .footer-icon-pro,
+  .footer-link,
+  .footer-contact-item,
+  .logo-icon {
+    transition: none;
+    animation: none;
+  }
+}

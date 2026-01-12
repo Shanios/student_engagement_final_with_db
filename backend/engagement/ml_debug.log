@@ -1,0 +1,70 @@
+🟢 Debug log started at 2026-01-11T19:08:18.062250
+🟢 [1] main() started
+🟢 [2] model loaded
+🟢 [3] retry thread started
+🟢 [4] CSV log opened
+🎥 Trying camera 1...
+✅ Successfully using camera 1
+🟢 [5] Camera opened successfully
+🟢 [6] Signal handlers registered
+🟢 [7] Face mesh initialized
+🟢 [8] Starting frame loop
+🎯 UPLOAD TRIGGERED | Status: NOT ENGAGED | Prob: 0.050
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/17/points | Score: 0.050, EAR: 0.253
+🧠 Inference: EAR samples=3, Prob=0.774, Status=ENGAGED
+🎯 UPLOAD TRIGGERED | Status: ENGAGED | Prob: 0.774
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/17/points | Score: 0.774, EAR: 0.223
+✅ Upload success (200)
+🧠 Inference: EAR samples=4, Prob=0.913, Status=ENGAGED
+🎯 UPLOAD TRIGGERED | Status: ENGAGED | Prob: 0.913
+✅ Upload success (200)
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/17/points | Score: 0.913, EAR: 0.228
+✅ Upload success (200)
+🧠 Inference: EAR samples=5, Prob=0.907, Status=ENGAGED
+🧠 Inference: EAR samples=6, Prob=0.924, Status=ENGAGED
+🎯 UPLOAD TRIGGERED | Status: ENGAGED | Prob: 0.924
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/17/points | Score: 0.924, EAR: 0.223
+✅ Upload success (200)
+🧠 Inference: EAR samples=7, Prob=0.950, Status=ENGAGED
+🎯 UPLOAD TRIGGERED | Status: ENGAGED | Prob: 0.950
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/17/points | Score: 0.950, EAR: 0.228
+✅ Upload success (200)
+🧠 Inference: EAR samples=8, Prob=0.886, Status=ENGAGED
+🎯 UPLOAD TRIGGERED | Status: ENGAGED | Prob: 0.886
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/17/points | Score: 0.886, EAR: 0.212
+✅ Upload success (200)
+🧠 Inference: EAR samples=9, Prob=0.751, Status=ENGAGED
+🎯 UPLOAD TRIGGERED | Status: ENGAGED | Prob: 0.751
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/17/points | Score: 0.751, EAR: 0.194
+✅ Upload success (200)
+🧠 Inference: EAR samples=10, Prob=0.709, Status=ENGAGED
+🎯 UPLOAD TRIGGERED | Status: ENGAGED | Prob: 0.709
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/17/points | Score: 0.709, EAR: 0.194
+✅ Upload success (200)
+🧠 Inference: EAR samples=10, Prob=0.627, Status=ENGAGED
+🎯 UPLOAD TRIGGERED | Status: ENGAGED | Prob: 0.627
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/17/points | Score: 0.627, EAR: 0.209
+🧠 Inference: EAR samples=10, Prob=0.616, Status=ENGAGED
+🎯 UPLOAD TRIGGERED | Status: ENGAGED | Prob: 0.616
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/17/points | Score: 0.616, EAR: 0.212
+✅ Upload success (200)
+✅ Upload success (200)
+🧠 Inference: EAR samples=10, Prob=0.619, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.576, Status=ENGAGED
+🎯 UPLOAD TRIGGERED | Status: ENGAGED | Prob: 0.576
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/17/points | Score: 0.576, EAR: 0.208
+✅ Upload success (200)
+🧠 Inference: EAR samples=10, Prob=0.577, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.508, Status=ENGAGED
+🎯 UPLOAD TRIGGERED | Status: ENGAGED | Prob: 0.508
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/17/points | Score: 0.508, EAR: 0.186
+🧠 Inference: EAR samples=10, Prob=0.509, Status=ENGAGED
+✅ Upload success (200)
+🧠 Inference: EAR samples=10, Prob=0.503, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.510, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.504, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.504, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.501, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.500, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.503, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.501, Status=ENGAGED

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Download, Mail, Share2, Loader, ArrowLeft } from 'lucide-react';
+import { Download, Mail, Share2, Loader, ArrowLeft, TrendingUp, Zap, Target, Activity } from 'lucide-react';
+import './SessionReport.css';
 
 const API = 'http://127.0.0.1:8000';
 
@@ -12,8 +13,8 @@ export default function SessionReportDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sending, setSending] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  // ✅ Fetch report data on mount
   useEffect(() => {
     fetchReport();
   }, [sessionId]);
@@ -22,12 +23,10 @@ export default function SessionReportDashboard() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      
       const response = await axios.get(
         `${API}/api/engagement/sessions/${sessionId}/report`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       setReport(response.data);
       setError(null);
     } catch (err) {
@@ -38,20 +37,14 @@ export default function SessionReportDashboard() {
     }
   };
 
-  // ✅ Download PDF
   const downloadPDF = async () => {
     try {
       setSending(true);
       const token = localStorage.getItem('token');
-      
       const response = await axios.get(
         `${API}/api/engagement/sessions/${sessionId}/report/pdf`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          responseType: 'blob'
-        }
+        { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }
       );
-
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -59,53 +52,24 @@ export default function SessionReportDashboard() {
       document.body.appendChild(link);
       link.click();
       link.parentElement.removeChild(link);
-
-      alert('✅ PDF downloaded successfully');
     } catch (err) {
-      alert('❌ Failed to download PDF');
       console.error(err);
     } finally {
       setSending(false);
     }
   };
 
-  // ✅ Send via Email
   const sendViaEmail = async () => {
     try {
       setSending(true);
       const token = localStorage.getItem('token');
-      
       await axios.post(
         `${API}/api/engagement/sessions/${sessionId}/email-report`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      alert('✅ Report sent to your email');
       setSending(false);
     } catch (err) {
-      alert('❌ Failed to send email');
-      console.error(err);
-      setSending(false);
-    }
-  };
-
-  // ✅ Share via WhatsApp
-  const shareViaWhatsApp = async () => {
-    try {
-      setSending(true);
-      const token = localStorage.getItem('token');
-      
-      await axios.post(
-        `${API}/api/engagement/sessions/${sessionId}/whatsapp-report`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      alert('✅ Report sent to WhatsApp');
-      setSending(false);
-    } catch (err) {
-      alert('❌ Failed to send WhatsApp message');
       console.error(err);
       setSending(false);
     }
@@ -113,17 +77,12 @@ export default function SessionReportDashboard() {
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(to bottom right, #0f172a, #1e293b)',
-        padding: '32px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <Loader style={{ width: 48, height: 48, color: '#60a5fa', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }} />
-          <p style={{ color: 'white', fontSize: '18px' }}>Loading report...</p>
+      <div className="report-loading">
+        <div className="loading-container">
+          <div className="loading-orb"></div>
+          <div className="loading-spinner"></div>
+          <p>Generating your majestic report...</p>
+          <p className="loading-subtitle">This won't take long</p>
         </div>
       </div>
     );
@@ -131,38 +90,13 @@ export default function SessionReportDashboard() {
 
   if (error) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(to bottom right, #0f172a, #1e293b)',
-        padding: '32px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <div style={{
-          background: '#7c2d12',
-          borderLeft: '4px solid #dc2626',
-          padding: '24px',
-          borderRadius: '8px',
-          color: 'white',
-          maxWidth: '500px'
-        }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}>❌ Error Loading Report</h2>
+      <div className="report-error">
+        <div className="error-container">
+          <div className="error-icon">⚠️</div>
+          <h2>Oops! Something went wrong</h2>
           <p>{error}</p>
-          <button
-            onClick={fetchReport}
-            style={{
-              marginTop: '16px',
-              background: '#991b1b',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '4px',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            Retry
+          <button onClick={fetchReport} className="btn btn-primary">
+            Try Again
           </button>
         </div>
       </div>
@@ -171,37 +105,12 @@ export default function SessionReportDashboard() {
 
   if (!report) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(to bottom right, #0f172a, #1e293b)',
-        padding: '32px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <div style={{
-          background: '#78350f',
-          borderLeft: '4px solid #f59e0b',
-          padding: '24px',
-          borderRadius: '8px',
-          color: 'white',
-          maxWidth: '500px'
-        }}>
-          <p style={{ fontSize: '18px' }}>⏳ Report is being generated...</p>
-          <p style={{ fontSize: '13px', color: '#d1d5db', marginTop: '8px' }}>Please check back in a few moments</p>
-          <button
-            onClick={fetchReport}
-            style={{
-              marginTop: '16px',
-              background: '#b45309',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '4px',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
+      <div className="report-empty">
+        <div className="empty-container">
+          <div className="empty-icon">⏳</div>
+          <h2>Report is being generated</h2>
+          <p>Please check back in a few moments</p>
+          <button onClick={fetchReport} className="btn btn-primary">
             Refresh
           </button>
         </div>
@@ -213,413 +122,345 @@ export default function SessionReportDashboard() {
   const distribution = report.analytics?.distribution || {};
   const critical = report.analytics?.critical_moments || {};
 
-  return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(to bottom right, #0f172a, #1e293b)',
-      padding: '32px'
-    }}>
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+  const getEngagementColor = (score) => {
+    if (score >= 0.67) return '#10b981';
+    if (score >= 0.33) return '#f59e0b';
+    return '#ef4444';
+  };
 
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        {/* Header */}
-        <div style={{ marginBottom: '32px' }}>
-          <button
-            onClick={() => navigate('/teacher/sessions')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: 'transparent',
-              color: '#60a5fa',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '14px',
-              marginBottom: '16px',
-              padding: '0'
-            }}
-          >
-            <ArrowLeft size={16} />
+  const getGrade = (score) => {
+    if (score >= 0.9) return { grade: 'A+', color: '#10b981' };
+    if (score >= 0.8) return { grade: 'A', color: '#10b981' };
+    if (score >= 0.7) return { grade: 'B', color: '#60a5fa' };
+    if (score >= 0.6) return { grade: 'C', color: '#f59e0b' };
+    return { grade: 'D', color: '#ef4444' };
+  };
+
+  const gradeInfo = getGrade(summary.avg_score || 0);
+
+  return (
+    <div className="report-page">
+      {/* Animated Background */}
+      <div className="report-bg">
+        <div className="bg-orb bg-orb-1"></div>
+        <div className="bg-orb bg-orb-2"></div>
+        <div className="bg-orb bg-orb-3"></div>
+        <div className="bg-orb bg-orb-4"></div>
+      </div>
+
+      <div className="report-content">
+        {/* Hero Header */}
+        <div className="report-hero">
+          <button onClick={() => navigate('/teacher/sessions')} className="back-btn">
+            <ArrowLeft size={18} />
             Back to Sessions
           </button>
-          
-          <h1 style={{ fontSize: '32px', fontWeight: 'bold', color: 'white', marginBottom: '8px' }}>
-            📊 {report.title || 'Session Analytics'}
-          </h1>
-          <p style={{ color: '#9ca3af' }}>
-            Session ID: {sessionId} | Generated: {new Date(report.generated_at).toLocaleString()}
-          </p>
+
+          <div className="hero-content">
+            <h1 className="hero-title">
+              <span className="title-icon">📊</span>
+              Session Analytics Report
+            </h1>
+            <p className="hero-subtitle">
+              Deep insights into student engagement and classroom performance
+            </p>
+          </div>
+
+          {/* Grade Badge */}
+          <div className="grade-badge" style={{ background: gradeInfo.color }}>
+            <div className="grade-letter">{gradeInfo.grade}</div>
+            <div className="grade-label">Overall<br/>Score</div>
+          </div>
         </div>
 
         {/* Action Buttons */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '16px',
-          marginBottom: '32px'
-        }}>
+        <div className="action-bar">
           <button
             onClick={downloadPDF}
             disabled={sending}
-            style={{
-              background: '#2563eb',
-              color: 'white',
-              fontWeight: 'bold',
-              padding: '12px 24px',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: sending ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              opacity: sending ? 0.6 : 1,
-              fontSize: '16px'
-            }}
+            className="action-btn download-btn"
+            title="Download report as PDF"
           >
             <Download size={20} />
-            {sending ? 'Downloading...' : 'Download PDF'}
+            <span>Download Excel</span>
+            {sending && <div className="btn-spinner"></div>}
           </button>
 
           <button
             onClick={sendViaEmail}
             disabled={sending}
-            style={{
-              background: '#16a34a',
-              color: 'white',
-              fontWeight: 'bold',
-              padding: '12px 24px',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: sending ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              opacity: sending ? 0.6 : 1,
-              fontSize: '16px'
-            }}
+            className="action-btn email-btn"
+            title="Send report via email"
           >
             <Mail size={20} />
-            {sending ? 'Sending...' : 'Send Email'}
+            <span>Email Report</span>
+            {sending && <div className="btn-spinner"></div>}
           </button>
 
-          <button
-            onClick={shareViaWhatsApp}
-            disabled={sending}
-            style={{
-              background: '#9333ea',
-              color: 'white',
-              fontWeight: 'bold',
-              padding: '12px 24px',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: sending ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              opacity: sending ? 0.6 : 1,
-              fontSize: '16px'
+          {/* <button
+            onClick={() => {
+              navigator.clipboard.writeText(sessionId);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
             }}
+            className="action-btn share-btn"
+            title="Copy session ID"
           >
             <Share2 size={20} />
-            {sending ? 'Sending...' : 'Share WhatsApp'}
-          </button>
+            <span>{copied ? 'Copied!' : 'Share ID'}</span>
+          </button> */}
         </div>
 
-        {/* Key Metrics */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '24px',
-          marginBottom: '32px'
-        }}>
-          <div style={{
-            background: '#1e3a8a',
-            borderLeft: '4px solid #60a5fa',
-            borderRadius: '8px',
-            padding: '24px'
-          }}>
-            <p style={{ color: '#d1d5db', fontSize: '13px' }}>Avg Engagement</p>
-            <p style={{ fontSize: '32px', fontWeight: 'bold', color: 'white', marginTop: '8px' }}>
+        {/* Key Metrics - Premium Cards */}
+        <div className="metrics-grid">
+          {/* Average Engagement */}
+          <div className="metric-card engagement-card">
+            <div className="metric-header">
+              <h3>Average Engagement</h3>
+              <Activity size={24} />
+            </div>
+            <div className="metric-value">
               {(summary.avg_score * 100).toFixed(1)}%
-            </p>
+            </div>
+            <div className="metric-bar">
+              <div className="bar-fill" style={{
+                width: `${summary.avg_score * 100}%`,
+                background: getEngagementColor(summary.avg_score)
+              }}></div>
+            </div>
+            <p className="metric-label">Overall classroom engagement level</p>
           </div>
 
-          <div style={{
-            background: '#064e3b',
-            borderLeft: '4px solid #10b981',
-            borderRadius: '8px',
-            padding: '24px'
-          }}>
-            <p style={{ color: '#d1d5db', fontSize: '13px' }}>Attention Score</p>
-            <p style={{ fontSize: '32px', fontWeight: 'bold', color: 'white', marginTop: '8px' }}>
-              {summary.attention_score}/100
-            </p>
+          {/* Attention Score */}
+          <div className="metric-card attention-card">
+            <div className="metric-header">
+              <h3>Attention Score</h3>
+              <Target size={24} />
+            </div>
+            <div className="metric-value">
+              {summary.attention_score || 0}
+              <span className="metric-suffix">/100</span>
+            </div>
+            <div className="metric-bar">
+              <div className="bar-fill" style={{
+                width: `${(summary.attention_score || 0)}%`,
+                background: '#a855f7'
+              }}></div>
+            </div>
+            <p className="metric-label">Student focus and concentration</p>
           </div>
 
-          <div style={{
-            background: '#581c87',
-            borderLeft: '4px solid #d946ef',
-            borderRadius: '8px',
-            padding: '24px'
-          }}>
-            <p style={{ color: '#d1d5db', fontSize: '13px' }}>Focus Time</p>
-            <p style={{ fontSize: '32px', fontWeight: 'bold', color: 'white', marginTop: '8px' }}>
-              {summary.focus_time_percentage?.toFixed(1)}%
-            </p>
+          {/* Focus Time */}
+          <div className="metric-card focus-card">
+            <div className="metric-header">
+              <h3>Focus Time</h3>
+              <Zap size={24} />
+            </div>
+            <div className="metric-value">
+              {(summary.focus_time_percentage || 0).toFixed(1)}%
+            </div>
+            <div className="metric-bar">
+              <div className="bar-fill" style={{
+                width: `${summary.focus_time_percentage || 0}%`,
+                background: '#10b981'
+              }}></div>
+            </div>
+            <p className="metric-label">Time spent actively engaged</p>
           </div>
 
-          <div style={{
-            background: '#7c2d12',
-            borderLeft: '4px solid #f97316',
-            borderRadius: '8px',
-            padding: '24px'
-          }}>
-            <p style={{ color: '#d1d5db', fontSize: '13px' }}>Duration</p>
-            <p style={{ fontSize: '32px', fontWeight: 'bold', color: 'white', marginTop: '8px' }}>
-              {summary.duration_formatted}
-            </p>
+          {/* Duration */}
+          <div className="metric-card duration-card">
+            <div className="metric-header">
+              <h3>Session Duration</h3>
+              <TrendingUp size={24} />
+            </div>
+            <div className="metric-value">
+              {summary.duration_formatted || '0:00'}
+            </div>
+            <div className="metric-subtext">
+              {summary.total_points || 0} data points collected
+            </div>
+            <p className="metric-label">Total time recorded</p>
           </div>
         </div>
 
-        {/* Graphs */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-          gap: '32px',
-          marginBottom: '32px'
-        }}>
-          {report.graphs?.engagement_timeline && (
-            <div style={{
-              background: '#1f2937',
-              borderRadius: '8px',
-              padding: '24px'
-            }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>
-                Engagement Timeline
-              </h3>
-              <img
-                src={`data:image/png;base64,${report.graphs.engagement_timeline}`}
-                alt="Engagement Timeline"
-                style={{ width: '100%', borderRadius: '4px' }}
-              />
-            </div>
-          )}
+        {/* Graphs Section */}
+        <div className="graphs-section">
+          <h2 className="section-title">📈 Visual Analytics</h2>
+          <div className="graphs-grid">
+            {report.graphs?.engagement_timeline && (
+              <div className="graph-card timeline-card">
+                <h3>Engagement Timeline</h3>
+                <img
+                  src={`data:image/png;base64,${report.graphs.engagement_timeline}`}
+                  alt="Engagement Timeline"
+                  className="graph-image"
+                />
+              </div>
+            )}
 
-          {report.graphs?.distribution_chart && (
-            <div style={{
-              background: '#1f2937',
-              borderRadius: '8px',
-              padding: '24px'
-            }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>
-                Engagement Distribution
-              </h3>
-              <img
-                src={`data:image/png;base64,${report.graphs.distribution_chart}`}
-                alt="Distribution Chart"
-                style={{ width: '100%', borderRadius: '4px' }}
-              />
-            </div>
-          )}
+            {report.graphs?.distribution_chart && (
+              <div className="graph-card distribution-card">
+                <h3>Engagement Distribution</h3>
+                <img
+                  src={`data:image/png;base64,${report.graphs.distribution_chart}`}
+                  alt="Distribution Chart"
+                  className="graph-image"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Detailed Metrics */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '32px',
-          marginBottom: '32px'
-        }}>
-          {/* Engagement Breakdown */}
-          <div style={{
-            background: '#1f2937',
-            borderRadius: '8px',
-            padding: '24px'
-          }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>
-              Engagement Breakdown
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: '#d1d5db' }}>High (&gt;67%)</span>
-                  <span style={{ color: '#10b981', fontWeight: 'bold' }}>
-                    {(distribution.high_engagement * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <div style={{ background: '#374151', borderRadius: '8px', height: '8px', overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      background: '#10b981',
-                      height: '100%',
+        {/* Detailed Analytics */}
+        <div className="analytics-section">
+          <div className="analytics-grid">
+            {/* Engagement Breakdown */}
+            <div className="analytics-card">
+              <h3>🎯 Engagement Breakdown</h3>
+              <div className="breakdown-list">
+                <div className="breakdown-item">
+                  <div className="breakdown-label">
+                    <span>High (&gt;67%)</span>
+                    <span className="breakdown-value" style={{ color: '#10b981' }}>
+                      {(distribution.high_engagement * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="breakdown-bar">
+                    <div className="bar-fill" style={{
                       width: `${distribution.high_engagement * 100}%`,
-                      transition: 'width 0.3s'
-                    }}
-                  />
+                      background: 'linear-gradient(90deg, #10b981, #34d399)'
+                    }}></div>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: '#d1d5db' }}>Medium (33-67%)</span>
-                  <span style={{ color: '#eab308', fontWeight: 'bold' }}>
-                    {(distribution.medium_engagement * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <div style={{ background: '#374151', borderRadius: '8px', height: '8px', overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      background: '#eab308',
-                      height: '100%',
+                <div className="breakdown-item">
+                  <div className="breakdown-label">
+                    <span>Medium (33-67%)</span>
+                    <span className="breakdown-value" style={{ color: '#f59e0b' }}>
+                      {(distribution.medium_engagement * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="breakdown-bar">
+                    <div className="bar-fill" style={{
                       width: `${distribution.medium_engagement * 100}%`,
-                      transition: 'width 0.3s'
-                    }}
-                  />
+                      background: 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+                    }}></div>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: '#d1d5db' }}>Low (&lt;33%)</span>
-                  <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
-                    {(distribution.low_engagement * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <div style={{ background: '#374151', borderRadius: '8px', height: '8px', overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      background: '#ef4444',
-                      height: '100%',
+                <div className="breakdown-item">
+                  <div className="breakdown-label">
+                    <span>Low (&lt;33%)</span>
+                    <span className="breakdown-value" style={{ color: '#ef4444' }}>
+                      {(distribution.low_engagement * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="breakdown-bar">
+                    <div className="bar-fill" style={{
                       width: `${distribution.low_engagement * 100}%`,
-                      transition: 'width 0.3s'
-                    }}
-                  />
+                      background: 'linear-gradient(90deg, #ef4444, #f87171)'
+                    }}></div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Critical Moments */}
-          <div style={{
-            background: '#1f2937',
-            borderRadius: '8px',
-            padding: '24px'
-          }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>
-              ⚠️ Critical Moments
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                padding: '12px',
-                background: '#374151',
-                borderRadius: '6px'
-              }}>
-                <span style={{ color: '#d1d5db' }}>Distraction Spikes</span>
-                <span style={{ color: '#ef4444', fontWeight: 'bold', fontSize: '18px' }}>
-                  {critical.total_spikes || 0}
-                </span>
-              </div>
+            {/* Critical Moments */}
+            <div className="analytics-card critical-card">
+              <h3>⚡ Critical Moments</h3>
+              <div className="critical-list">
+                <div className="critical-item">
+                  <div className="critical-icon" style={{ background: 'rgba(239, 68, 68, 0.1)' }}>
+                    <span>📉</span>
+                  </div>
+                  <div className="critical-info">
+                    <span className="critical-label">Distraction Spikes</span>
+                    <span className="critical-value">{critical.total_spikes || 0}</span>
+                  </div>
+                </div>
 
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                padding: '12px',
-                background: '#374151',
-                borderRadius: '6px'
-              }}>
-                <span style={{ color: '#d1d5db' }}>Engagement Dropoffs</span>
-                <span style={{ color: '#f59e0b', fontWeight: 'bold', fontSize: '18px' }}>
-                  {critical.total_dropoffs || 0}
-                </span>
-              </div>
+                <div className="critical-item">
+                  <div className="critical-icon" style={{ background: 'rgba(245, 158, 11, 0.1)' }}>
+                    <span>⚠️</span>
+                  </div>
+                  <div className="critical-info">
+                    <span className="critical-label">Engagement Dropoffs</span>
+                    <span className="critical-value">{critical.total_dropoffs || 0}</span>
+                  </div>
+                </div>
 
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                padding: '12px',
-                background: '#374151',
-                borderRadius: '6px'
-              }}>
-                <span style={{ color: '#d1d5db' }}>Peak Periods</span>
-                <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '18px' }}>
-                  {critical.total_peaks || 0}
-                </span>
-              </div>
-
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                padding: '12px',
-                background: '#374151',
-                borderRadius: '6px'
-              }}>
-                <span style={{ color: '#d1d5db' }}>Total Data Points</span>
-                <span style={{ color: '#60a5fa', fontWeight: 'bold', fontSize: '18px' }}>
-                  {summary.total_points || 0}
-                </span>
+                <div className="critical-item">
+                  <div className="critical-icon" style={{ background: 'rgba(16, 185, 129, 0.1)' }}>
+                    <span>📈</span>
+                  </div>
+                  <div className="critical-info">
+                    <span className="critical-label">Peak Periods</span>
+                    <span className="critical-value">{critical.total_peaks || 0}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Performance Summary */}
-        <div style={{
-          background: '#1f2937',
-          borderRadius: '8px',
-          padding: '24px'
-        }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>
-            📈 Performance Summary
-          </h3>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-            gap: '16px',
-            textAlign: 'center'
-          }}>
-            <div>
-              <p style={{ color: '#9ca3af', fontSize: '13px' }}>Peak Engagement</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981', marginTop: '8px' }}>
-                {(summary.max_score * 100).toFixed(1)}%
-              </p>
+        <div className="performance-section">
+          <h2 className="section-title">🏆 Performance Summary</h2>
+          <div className="performance-grid">
+            <div className="performance-card peak">
+              <div className="perf-icon">🔥</div>
+              <div className="perf-content">
+                <p className="perf-label">Peak Engagement</p>
+                <p className="perf-value" style={{ color: '#10b981' }}>
+                  {(summary.max_score * 100).toFixed(1)}%
+                </p>
+              </div>
             </div>
 
-            <div>
-              <p style={{ color: '#9ca3af', fontSize: '13px' }}>Lowest Engagement</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444', marginTop: '8px' }}>
-                {(summary.min_score * 100).toFixed(1)}%
-              </p>
+            <div className="performance-card lowest">
+              <div className="perf-icon">❄️</div>
+              <div className="perf-content">
+                <p className="perf-label">Lowest Engagement</p>
+                <p className="perf-value" style={{ color: '#ef4444' }}>
+                  {(summary.min_score * 100).toFixed(1)}%
+                </p>
+              </div>
             </div>
 
-            <div>
-              <p style={{ color: '#9ca3af', fontSize: '13px' }}>Volatility</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#9333ea', marginTop: '8px' }}>
-                {summary.volatility?.toFixed(3)}
-              </p>
+            <div className="performance-card volatility">
+              <div className="perf-icon">📊</div>
+              <div className="perf-content">
+                <p className="perf-label">Data Volatility</p>
+                <p className="perf-value" style={{ color: '#9333ea' }}>
+                  {summary.volatility?.toFixed(3)}
+                </p>
+              </div>
             </div>
 
-            <div>
-              <p style={{ color: '#9ca3af', fontSize: '13px' }}>Data Stability</p>
-              <p style={{
-                fontSize: '24px',
-                fontWeight: 'bold',
-                color: summary.volatility <= 0.2 ? '#10b981' : summary.volatility <= 0.5 ? '#f59e0b' : '#ef4444',
-                marginTop: '8px'
-              }}>
-                {summary.volatility <= 0.2 ? '✅ High' : summary.volatility <= 0.5 ? '⚠️ Med' : '❌ Low'}
-              </p>
+            <div className="performance-card stability">
+              <div className="perf-icon">✨</div>
+              <div className="perf-content">
+                <p className="perf-label">Data Stability</p>
+                <p className="perf-value" style={{
+                  color: summary.volatility <= 0.2 ? '#10b981' : summary.volatility <= 0.5 ? '#f59e0b' : '#ef4444'
+                }}>
+                  {summary.volatility <= 0.2 ? 'Excellent' : summary.volatility <= 0.5 ? 'Good' : 'Fair'}
+                </p>
+              </div>
             </div>
           </div>
+        </div>
+
+        {/* Footer Info */}
+        <div className="report-footer">
+          <div className="footer-info">
+            <p>Session ID: <code>{sessionId}</code></p>
+            <p>Generated: {new Date(report.generated_at).toLocaleString()}</p>
+          </div>
+          <button onClick={() => navigate('/teacher/sessions')} className="btn btn-secondary">
+            View All Sessions
+          </button>
         </div>
       </div>
     </div>

@@ -5,6 +5,8 @@ import SessionAnalytics from "../components/SessionAnalytics";
 import "../styles/global.css";
 import { useNavigate } from "react-router-dom";
 
+const API = "http://127.0.0.1:8000";
+
 export default function TeacherDashboard() {
   const navigate = useNavigate();
   const [sessionId, setSessionId] = useState(null);
@@ -17,15 +19,18 @@ export default function TeacherDashboard() {
   const [sessionInfo, setSessionInfo] = useState(null);
   const [elapsedTime, setElapsedTime] = useState("0:00");
   const [attendanceCount, setAttendanceCount] = useState(0);
-  // 🔒 UPDATE A — Teacher authority state
-const [roomLocked, setRoomLocked] = useState(false);
-const [studentsMuted, setStudentsMuted] = useState(false);
-const [camerasDisabled, setCamerasDisabled] = useState(false);
+  
+  // Teacher control states
+  const [roomLocked, setRoomLocked] = useState(false);
+  const [studentsMuted, setStudentsMuted] = useState(false);
+  const [camerasDisabled, setCamerasDisabled] = useState(false);
 
-  // ✅ ISSUE #1 FIX: Track session creation state
+  // Session creation tracking
   const [sessionCreated, setSessionCreated] = useState(false);
 
-  // ✅ Session timer
+  /* =======================
+     SESSION TIMER
+     ======================= */
   useEffect(() => {
     if (!sessionId || ended) return;
 
@@ -44,7 +49,9 @@ const [camerasDisabled, setCamerasDisabled] = useState(false);
     return () => clearInterval(interval);
   }, [sessionId, ended, sessionInfo]);
 
-  // ✅ Auto-hide errors after 5 seconds
+  /* =======================
+     AUTO-HIDE ERRORS
+     ======================= */
   useEffect(() => {
     if (error) {
       setErrorVisible(true);
@@ -53,6 +60,9 @@ const [camerasDisabled, setCamerasDisabled] = useState(false);
     }
   }, [error]);
 
+  /* =======================
+     START SESSION
+     ======================= */
   async function startSession() {
     setError("");
     setLoading(true);
@@ -60,7 +70,7 @@ const [camerasDisabled, setCamerasDisabled] = useState(false);
     try {
       const token = localStorage.getItem("token");
       const res = await axios.post(
-        "http://127.0.0.1:8000/api/engagement/sessions",
+        `${API}/api/engagement/sessions`,
         { title: "Live Class Session", subject: "General" },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -68,7 +78,7 @@ const [camerasDisabled, setCamerasDisabled] = useState(false);
       console.log("🎓 Session started:", res.data.id);
       setSessionId(res.data.id);
       setSessionInfo(res.data);
-      setSessionCreated(true); // ✅ ISSUE #1: Mark session as created
+      setSessionCreated(true);
       setEnded(false);
       setElapsedTime("0:00");
     } catch (err) {
@@ -79,7 +89,9 @@ const [camerasDisabled, setCamerasDisabled] = useState(false);
     }
   }
 
-  // ✅ ISSUE #3 FIX: Properly end session with better error handling
+  /* =======================
+     END SESSION
+     ======================= */
   async function endSession() {
     if (!sessionId) {
       setError("❌ No active session to end");
@@ -91,7 +103,7 @@ const [camerasDisabled, setCamerasDisabled] = useState(false);
 
     try {
       const token = localStorage.getItem("token");
-      
+
       if (!token) {
         throw new Error("No authentication token found");
       }
@@ -99,10 +111,10 @@ const [camerasDisabled, setCamerasDisabled] = useState(false);
       console.log("🛑 Sending end session request for:", sessionId);
 
       const res = await axios.post(
-        `http://127.0.0.1:8000/api/engagement/sessions/${sessionId}/end`,
+        `${API}/api/engagement/sessions/${sessionId}/end`,
         {},
         {
-          headers: { 
+          headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
@@ -114,17 +126,14 @@ const [camerasDisabled, setCamerasDisabled] = useState(false);
       setEnded(true);
       setError("");
 
-      // ✅ CRITICAL FIX: Redirect to report page after session ends
       console.log("📊 Redirecting to report page for session:", sessionId);
-      
-      // Wait 1 second so UI updates are visible to user
+
       setTimeout(() => {
         navigate(`/teacher/sessions/${sessionId}/report`, { replace: true });
       }, 1000);
-
     } catch (err) {
       console.error("❌ End session error:", err);
-      
+
       let errorMsg = "Failed to end session";
       if (err.response?.status === 403) {
         errorMsg = "Only teachers can end sessions";
@@ -133,74 +142,85 @@ const [camerasDisabled, setCamerasDisabled] = useState(false);
       } else if (err.code === "ECONNABORTED") {
         errorMsg = "Request timeout - session may still be ended";
         setEnded(true);
-        // Still try to redirect even on timeout
         setTimeout(() => {
           navigate(`/teacher/sessions/${sessionId}/report`, { replace: true });
         }, 1000);
       } else if (err.response?.data?.detail) {
         errorMsg = err.response.data.detail;
       }
-      
+
       setError(errorMsg);
     } finally {
       setEnding(false);
     }
   }
-// 🔒 Lock / Unlock room
-async function toggleRoomLock() {
-  const token = localStorage.getItem("token");
-  if (!token || !sessionId) return;
 
-  try {
-    const url = roomLocked
-      ? `/api/video/sessions/${sessionId}/unlock`
-      : `/api/video/sessions/${sessionId}/lock`;
+  /* =======================
+     LOCK / UNLOCK ROOM
+     ======================= */
+  async function toggleRoomLock() {
+    const token = localStorage.getItem("token");
+    if (!token || !sessionId) return;
 
-    await axios.post(`http://127.0.0.1:8000${url}`, {}, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    try {
+      const url = roomLocked ? "unlock" : "lock";
 
-    setRoomLocked(!roomLocked);
-  } catch (err) {
-    setError("Failed to toggle room lock");
+      await axios.post(
+        `${API}/api/engagement/sessions/${sessionId}/${url}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setRoomLocked(!roomLocked);
+    } catch (err) {
+      console.error("Room lock error:", err);
+      setError("Failed to toggle room lock");
+    }
   }
-}
 
-// 🔇 Mute all students
-async function muteStudents() {
-  const token = localStorage.getItem("token");
-  if (!token || !sessionId) return;
+  /* =======================
+     MUTE ALL STUDENTS
+     ======================= */
+  async function muteStudents() {
+    const token = localStorage.getItem("token");
+    if (!token || !sessionId) return;
 
-  try {
-    await axios.post(
-      `http://127.0.0.1:8000/api/video/sessions/${sessionId}/mute-all`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    setStudentsMuted(true);
-  } catch {
-    setError("Failed to mute students");
+    try {
+      await axios.post(
+        `${API}/api/engagement/sessions/${sessionId}/mute`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setStudentsMuted(true);
+    } catch (err) {
+      console.error("Mute error:", err);
+      setError("Failed to mute students");
+    }
   }
-}
 
-// 📷 Disable student cameras
-async function disableStudentCameras() {
-  const token = localStorage.getItem("token");
-  if (!token || !sessionId) return;
+  /* =======================
+     DISABLE STUDENT CAMERAS
+     ======================= */
+  async function disableStudentCameras() {
+    const token = localStorage.getItem("token");
+    if (!token || !sessionId) return;
 
-  try {
-    await axios.post(
-      `http://127.0.0.1:8000/api/video/sessions/${sessionId}/disable-cameras`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    setCamerasDisabled(true);
-  } catch {
-    setError("Failed to disable cameras");
+    try {
+      await axios.post(
+        `${API}/api/engagement/sessions/${sessionId}/disable-cameras`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setCamerasDisabled(true);
+    } catch (err) {
+      console.error("Camera disable error:", err);
+      setError("Failed to disable cameras");
+    }
   }
-}
 
-  // ✅ ISSUE #2 FIX: Validate before navigating to video
+  /* =======================
+     NAVIGATE TO VIDEO CLASS
+     ======================= */
   function handleVideoClassClick() {
     if (!sessionCreated || !sessionId) {
       setError("❌ Please create an engagement session first!");
@@ -216,7 +236,9 @@ async function disableStudentCameras() {
     navigate(`/teacher/video/${sessionId}`);
   }
 
-  // ✅ Heartbeat to detect if session ends remotely
+  /* =======================
+     HEARTBEAT - DETECT REMOTE SESSION END
+     ======================= */
   useEffect(() => {
     if (!sessionId || ended) return;
 
@@ -224,7 +246,7 @@ async function disableStudentCameras() {
     const interval = setInterval(async () => {
       try {
         const res = await fetch(
-          `http://127.0.0.1:8000/api/engagement/sessions/${sessionId}/heartbeat`,
+          `${API}/api/engagement/sessions/${sessionId}/heartbeat`,
           {
             method: "POST",
             headers: { Authorization: `Bearer ${token}` },
@@ -241,32 +263,35 @@ async function disableStudentCameras() {
       } catch (err) {
         console.warn("⚠️ Heartbeat failed:", err);
       }
-    }, 10000); // Check every 10 seconds
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [sessionId, ended]);
-// ✅ UPDATE D — Poll live attendance
-useEffect(() => {
-  if (!sessionId || ended) return;
 
-  const token = localStorage.getItem("token");
-  if (!token) return;
+  /* =======================
+     POLL LIVE ATTENDANCE
+     ======================= */
+  useEffect(() => {
+    if (!sessionId || ended) return;
 
-  const interval = setInterval(async () => {
-    try {
-      const res = await axios.get(
-        `http://127.0.0.1:8000/api/attendance/count/${sessionId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
-      setAttendanceCount(res.data.count);
-    } catch (err) {
-      console.warn("Attendance poll failed", err);
-    }
-  }, 5000); // every 5s
+    const interval = setInterval(async () => {
+      try {
+        const res = await axios.get(
+          `${API}/api/attendance/count/${sessionId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-  return () => clearInterval(interval);
-}, [sessionId, ended]);
+        setAttendanceCount(res.data.count);
+      } catch (err) {
+        console.warn("Attendance poll failed", err);
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [sessionId, ended]);
 
   return (
     <div
@@ -281,8 +306,8 @@ useEffect(() => {
     >
       <h1 style={{ marginBottom: "30px", color: "#f1f5f9" }}>Teacher Dashboard</h1>
 
-      {/* ✅ Navigation Buttons */}
-      <div style={{ marginBottom: "20px", display: "flex", gap: "10px" }}>
+      {/* Navigation Buttons */}
+      <div style={{ marginBottom: "20px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
         {sessionCreated && !ended && (
           <button
             onClick={() => navigate("/teacher/sessions")}
@@ -292,7 +317,6 @@ useEffect(() => {
           </button>
         )}
 
-        {/* ✅ ISSUE #1 FIX: Only show video button AFTER session created */}
         {sessionCreated && !ended && (
           <button
             onClick={handleVideoClassClick}
@@ -304,7 +328,7 @@ useEffect(() => {
         )}
       </div>
 
-      {/* ✅ Show session creation button only when no active session */}
+      {/* Create Session Button */}
       {!sessionId && (
         <div style={{ marginTop: "40px" }}>
           <button
@@ -319,7 +343,7 @@ useEffect(() => {
         </div>
       )}
 
-      {/* ✅ Session active panel */}
+      {/* Session Active Panel */}
       {sessionId && (
         <div>
           {/* Session Info Panel */}
@@ -341,29 +365,29 @@ useEffect(() => {
                 marginBottom: "12px",
               }}
             >
-              <div>
+              <div style={{ flex: 1 }}>
                 <p style={{ margin: "0 0 8px 0", color: "#e2e8f0" }}>
                   <strong>Session ID:</strong> {sessionId}
                 </p>
-               <div className="session-timer" style={{ color: "#cbd5e1" }}>
-  <div style={{ marginTop: "6px", color: "#e2e8f0" }}>
-    👥 Live Attendance:{" "}
-    <strong style={{ color: "#22c55e" }}>
-      {attendanceCount}
-    </strong>
-  </div>
+                <div className="session-timer" style={{ color: "#cbd5e1" }}>
+                  <div style={{ marginTop: "6px", color: "#e2e8f0" }}>
+                    👥 Live Attendance:{" "}
+                    <strong style={{ color: "#22c55e" }}>
+                      {attendanceCount}
+                    </strong>
+                  </div>
 
-  <div style={{ marginTop: "4px" }}>
-    ⏱️ Elapsed:{" "}
-    <span
-      className="session-timer-value"
-      style={{ color: "#60a5fa" }}
-    >
-      {elapsedTime}
-    </span>
-  </div>
-</div>
-</div>
+                  <div style={{ marginTop: "4px" }}>
+                    ⏱️ Elapsed:{" "}
+                    <span
+                      className="session-timer-value"
+                      style={{ color: "#60a5fa" }}
+                    >
+                      {elapsedTime}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
               {/* Status Badge */}
               <div
@@ -375,6 +399,7 @@ useEffect(() => {
                   padding: "8px 16px",
                   borderRadius: "6px",
                   fontWeight: "bold",
+                  whiteSpace: "nowrap",
                 }}
               >
                 {ended ? "✅ Ended" : "🔴 Live"}
@@ -418,35 +443,47 @@ useEffect(() => {
                 </button>
               </p>
             )}
-{/* 🔒 Teacher Controls */}
-{!ended && (
-  <div style={{ marginBottom: "12px", display: "flex", gap: "10px" }}>
-    <button
-      onClick={toggleRoomLock}
-      className="btn btn-secondary"
-    >
-      {roomLocked ? "🔓 Unlock Class" : "🔒 Lock Class"}
-    </button>
 
-    <button
-      onClick={muteStudents}
-      disabled={studentsMuted}
-      className="btn btn-secondary"
-    >
-      🔇 Mute Students
-    </button>
+            {/* Teacher Controls */}
+            {!ended && (
+              <div style={{ marginBottom: "12px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <button
+                  onClick={toggleRoomLock}
+                  className="btn btn-secondary"
+                  style={{
+                    background: roomLocked ? "#7c3aed" : "#3b82f6",
+                  }}
+                >
+                  {roomLocked ? "🔓 Unlock Class" : "🔒 Lock Class"}
+                </button>
 
-    <button
-      onClick={disableStudentCameras}
-      disabled={camerasDisabled}
-      className="btn btn-secondary"
-    >
-      📷 Disable Cameras
-    </button>
-  </div>
-)}
+                <button
+                  onClick={muteStudents}
+                  disabled={studentsMuted}
+                  className="btn btn-secondary"
+                  style={{
+                    background: studentsMuted ? "#6b7280" : "#3b82f6",
+                    opacity: studentsMuted ? 0.6 : 1,
+                  }}
+                >
+                  🔇 Mute Students
+                </button>
 
-            {/* ✅ ISSUE #3 FIX: End Session Button with better feedback */}
+                <button
+                  onClick={disableStudentCameras}
+                  disabled={camerasDisabled}
+                  className="btn btn-secondary"
+                  style={{
+                    background: camerasDisabled ? "#6b7280" : "#3b82f6",
+                    opacity: camerasDisabled ? 0.6 : 1,
+                  }}
+                >
+                  📷 Disable Cameras
+                </button>
+              </div>
+            )}
+
+            {/* End Session Button */}
             {!ended ? (
               <button
                 onClick={endSession}
@@ -489,7 +526,7 @@ useEffect(() => {
         </div>
       )}
 
-      {/* ✅ Error Banner with Animation */}
+      {/* Error Banner */}
       {errorVisible && error && (
         <div
           style={{
@@ -513,6 +550,19 @@ useEffect(() => {
           {error}
         </div>
       )}
+
+      <style>{`
+        @keyframes slideIn {
+          from {
+            transform: translateY(-10px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 }

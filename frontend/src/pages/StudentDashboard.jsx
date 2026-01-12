@@ -263,16 +263,7 @@ export default function StudentDashboard() {
             </div>
           </div>
 
-          {/* Real-time Graph */}
-          <RealTimeEngagement
-            sessionId={sessionId}
-            paused={false}
-            onPointsUpdate={setPoints}
-            mode="live"
-          />
-
-          {/* Analytics */}
-          <SessionAnalytics points={points} sessionId={sessionId} />
+        
         </div>
       )}
     </div>

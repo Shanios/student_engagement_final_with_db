@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { Download, Mail, Trash2, Eye, Clock, Users, TrendingUp, AlertCircle, CheckCircle, Loader } from "lucide-react";
+import "./SessionList.css";
 import "../styles/global.css";
 
 export default function SessionList() {
@@ -11,10 +13,10 @@ export default function SessionList() {
   const [selectedSession, setSelectedSession] = useState(null);
   const [participants, setParticipants] = useState([]);
   
-  // ✅ FIXED: Track which sessions are downloading/sending
   const [downloadingCsv, setDownloadingCsv] = useState(new Set());
   const [sendingEmail, setSendingEmail] = useState(new Set());
   const [emailSent, setEmailSent] = useState(new Set());
+  const [filterSubject, setFilterSubject] = useState("all");
 
   // Fetch all ended sessions
   useEffect(() => {
@@ -64,7 +66,6 @@ export default function SessionList() {
 
   // Download CSV
   const handleDownloadCsv = async (sessionId) => {
-    // ✅ FIXED: Add this session to downloading set
     setDownloadingCsv((prev) => new Set([...prev, sessionId]));
     
     try {
@@ -77,7 +78,6 @@ export default function SessionList() {
         }
       );
 
-      // Create download link
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -92,7 +92,6 @@ export default function SessionList() {
       console.error("❌ Download failed:", err);
       setError("Failed to download attendance");
     } finally {
-      // ✅ FIXED: Remove this session from downloading set
       setDownloadingCsv((prev) => {
         const newSet = new Set(prev);
         newSet.delete(sessionId);
@@ -103,7 +102,6 @@ export default function SessionList() {
 
   // Send email with attendance
   const handleSendEmail = async (sessionId) => {
-    // ✅ FIXED: Add this session to sending set
     setSendingEmail((prev) => new Set([...prev, sessionId]));
 
     try {
@@ -117,10 +115,8 @@ export default function SessionList() {
 
       console.log("✅ Email sent:", res.data);
       
-      // ✅ FIXED: Add this session to emailSent set
       setEmailSent((prev) => new Set([...prev, sessionId]));
 
-      // Hide success message after 5 seconds
       setTimeout(() => {
         setEmailSent((prev) => {
           const newSet = new Set(prev);
@@ -132,7 +128,6 @@ export default function SessionList() {
       console.error("❌ Email send failed:", err);
       setError(err?.response?.data?.detail || "Failed to send email");
     } finally {
-      // ✅ FIXED: Remove this session from sending set
       setSendingEmail((prev) => {
         const newSet = new Set(prev);
         newSet.delete(sessionId);
@@ -152,201 +147,194 @@ export default function SessionList() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Remove from UI
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
     } catch (err) {
       setError("Failed to delete session");
     }
   };
 
+  // Filter sessions by subject
+  const filteredSessions = filterSubject === "all" 
+    ? sessions 
+    : sessions.filter(s => s.subject === filterSubject);
+
+  const uniqueSubjects = [...new Set(sessions.map(s => s.subject).filter(Boolean))];
+
   if (loading) {
     return (
-      <div
-        style={{
-          padding: "20px",
-          background: "#0f172a",
-          minHeight: "100vh",
-          color: "#e2e8f0",
-          textAlign: "center",
-        }}
-      >
+      <div className="session-loading">
+        <div className="loading-spinner">
+          <Loader size={48} />
+        </div>
         <p>Loading sessions...</p>
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        padding: "20px",
-        maxWidth: "1400px",
-        margin: "0 auto",
-        background: "#0f172a",
-        minHeight: "100vh",
-        color: "#e2e8f0",
-      }}
-    >
-      <h1 style={{ marginBottom: "30px", color: "#f1f5f9" }}>Session History</h1>
+    <div className="session-list-container">
+      {/* Header Section */}
+      <div className="session-header">
+        <div className="header-content">
+          <h1 className="session-title">Session History</h1>
+          <p className="session-subtitle">Manage and analyze your teaching sessions</p>
+        </div>
+        <div className="header-stats">
+          <div className="stat-card">
+            <div className="stat-icon">📊</div>
+            <div className="stat-info">
+              <p className="stat-label">Total Sessions</p>
+              <p className="stat-value">{sessions.length}</p>
+            </div>
+          </div>
+          
+        </div>
+      </div>
 
       {/* Error Banner */}
       {error && (
-        <div
-          style={{
-            marginBottom: "20px",
-            padding: "14px 16px",
-            background: "#7f1d1d",
-            border: "1px solid #991b1b",
-            borderRadius: "6px",
-            color: "#fca5a5",
-          }}
-        >
-          ❌ {error}
+        <div className="error-banner">
+          <AlertCircle size={20} />
+          <span>{error}</span>
+          <button onClick={() => setError("")}>×</button>
+        </div>
+      )}
+
+      {/* Filters */}
+      {uniqueSubjects.length > 0 && (
+        <div className="filter-section">
+          <label>Filter by Subject:</label>
+          <div className="filter-buttons">
+            <button
+              className={`filter-btn ${filterSubject === 'all' ? 'active' : ''}`}
+              onClick={() => setFilterSubject('all')}
+            >
+              All
+            </button>
+            {uniqueSubjects.map(subject => (
+              <button
+                key={subject}
+                className={`filter-btn ${filterSubject === subject ? 'active' : ''}`}
+                onClick={() => setFilterSubject(subject)}
+              >
+                {subject}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
       {/* Sessions Grid */}
-      {sessions.length > 0 ? (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
-            gap: "20px",
-            marginBottom: "30px",
-          }}
-        >
-          {sessions.map((session) => (
-            <div key={session.id}>
-              {/* ✅ FIXED: Success Banner per session */}
+      {filteredSessions.length > 0 ? (
+        <div className="sessions-grid">
+          {filteredSessions.map((session) => (
+            <div key={session.id} className="session-card-wrapper">
+              {/* Success Banner */}
               {emailSent.has(session.id) && (
-                <div
-                  style={{
-                    marginBottom: "10px",
-                    padding: "14px 16px",
-                    background: "#065f46",
-                    border: "1px solid #059669",
-                    borderRadius: "6px",
-                    color: "#86efac",
-                    animation: "slideIn 0.3s ease",
-                  }}
-                >
-                  ✅ Attendance report sent to your email!
+                <div className="success-banner">
+                  <CheckCircle size={18} />
+                  <span>Attendance report sent to your email!</span>
                 </div>
               )}
 
-              <div
-                style={{
-                  background: "#1e293b",
-                  border: "2px solid #334155",
-                  borderRadius: "8px",
-                  padding: "16px",
-                  cursor: "pointer",
-                  transition: "all 0.3s ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "#3b82f6";
-                  e.currentTarget.style.transform = "translateY(-4px)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "#334155";
-                  e.currentTarget.style.transform = "translateY(0)";
-                }}
-              >
-                <h3 style={{ marginTop: 0, color: "#f1f5f9" }}>{session.title}</h3>
+              <div className="session-card">
+                {/* Card Header */}
+                <div className="card-header">
+                  <div className="header-info">
+                    <h3 className="session-name">{session.title}</h3>
+                    {session.subject && (
+                      <span className="subject-badge">{session.subject}</span>
+                    )}
+                  </div>
+                  <div className="engagement-score">
+                    <span className="score-label">Engagement</span>
+                    <span className="score-value">{(session.avg_engagement * 100).toFixed(0)}%</span>
+                  </div>
+                </div>
 
-                {session.subject && (
-                  <p style={{ margin: "8px 0", color: "#cbd5e1", fontSize: "14px" }}>
-                    <strong>Subject:</strong> {session.subject}
-                  </p>
-                )}
+                {/* Card Details */}
+                <div className="card-details">
+                  <div className="detail-item">
+                    <Clock size={16} />
+                    <div>
+                      <p className="detail-label">Date & Time</p>
+                      <p className="detail-value">{new Date(session.ended_at).toLocaleDateString()} • {new Date(session.ended_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                    </div>
+                  </div>
 
-                <p style={{ margin: "8px 0", color: "#cbd5e1", fontSize: "14px" }}>
-                  <strong>Date:</strong>{" "}
-                  {new Date(session.ended_at).toLocaleDateString()} at{" "}
-                  {new Date(session.ended_at).toLocaleTimeString()}
-                </p>
+                  <div className="detail-item">
+                    <TrendingUp size={16} />
+                    <div>
+                      <p className="detail-label">Duration</p>
+                      <p className="detail-value">{Math.floor(session.duration_seconds / 60)} minutes</p>
+                    </div>
+                  </div>
 
-                <p style={{ margin: "8px 0", color: "#cbd5e1", fontSize: "14px" }}>
-                  <strong>Duration:</strong>{" "}
-                  {Math.floor(session.duration_seconds / 60)} minutes
-                </p>
-
-                <p style={{ margin: "8px 0", color: "#10b981", fontSize: "14px", fontWeight: "600" }}>
-                  👥 Students Attended: {session.attendance_count}
-                </p>
-
-                <p style={{ margin: "8px 0", color: "#60a5fa", fontSize: "14px" }}>
-                  📊 Avg Engagement: {(session.avg_engagement * 100).toFixed(1)}%
-                </p>
+                  <div className="detail-item">
+                    <Users size={16} />
+                    <div>
+                      <p className="detail-label">Attendees</p>
+                      <p className="detail-value">{session.attendance_count} students</p>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Action Buttons */}
-                <div style={{ display: "flex", gap: "10px", marginTop: "12px", flexWrap: "wrap" }}>
-                  
+                <div className="card-actions">
                   <button
+                    className="action-btn btn-report"
                     onClick={() => navigate(`/teacher/sessions/${session.id}/report`)}
-                    style={{
-                      padding: "8px 12px",
-                      fontSize: "12px",
-                      background: "#8b5cf6",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      fontWeight: "600",
-                    }}
-                    onMouseEnter={(e) => (e.target.style.background = "#7c3aed")}
-                    onMouseLeave={(e) => (e.target.style.background = "#8b5cf6")}
+                    title="View detailed report"
                   >
-                    📊 View Report
+                    <Eye size={16} />
+                    <span>Report</span>
                   </button>
                   
                   <button
+                    className="action-btn btn-download"
                     onClick={() => handleDownloadCsv(session.id)}
                     disabled={downloadingCsv.has(session.id)}
-                    style={{
-                      padding: "8px 12px",
-                      fontSize: "12px",
-                      background: downloadingCsv.has(session.id) ? "#334155" : "#10b981",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: downloadingCsv.has(session.id) ? "not-allowed" : "pointer",
-                      fontWeight: "600",
-                    }}
+                    title="Download attendance CSV"
                   >
-                    {downloadingCsv.has(session.id) ? "⏳ Downloading..." : "📥 Download CSV"}
+                    {downloadingCsv.has(session.id) ? (
+                      <>
+                        <Loader size={16} className="spinner" />
+                        <span>Downloading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download size={16} />
+                        <span>CSV</span>
+                      </>
+                    )}
                   </button>
 
                   <button
+                    className="action-btn btn-email"
                     onClick={() => handleSendEmail(session.id)}
                     disabled={sendingEmail.has(session.id)}
-                    style={{
-                      padding: "8px 12px",
-                      fontSize: "12px",
-                      background: sendingEmail.has(session.id) ? "#334155" : "#ec4899",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: sendingEmail.has(session.id) ? "not-allowed" : "pointer",
-                      fontWeight: "600",
-                    }}
+                    title="Send attendance report via email"
                   >
-                    {sendingEmail.has(session.id) ? "⏳ Sending..." : "📧 Email Report"}
+                    {sendingEmail.has(session.id) ? (
+                      <>
+                        <Loader size={16} className="spinner" />
+                        <span>Sending...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mail size={16} />
+                        <span>Email</span>
+                      </>
+                    )}
                   </button>
 
                   <button
+                    className="action-btn btn-delete"
                     onClick={() => handleDeleteSession(session.id)}
-                    style={{
-                      padding: "8px 12px",
-                      fontSize: "12px",
-                      background: "#dc2626",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      fontWeight: "600",
-                    }}
+                    title="Delete this session"
                   >
-                    🗑️ Delete
+                    <Trash2 size={16} />
+                    <span>Delete</span>
                   </button>
                 </div>
               </div>
@@ -354,142 +342,81 @@ export default function SessionList() {
           ))}
         </div>
       ) : (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "40px",
-            color: "#64748b",
-          }}
-        >
-          <p>No ended sessions yet. Start a session to get attendance reports!</p>
+        <div className="empty-state">
+          <div className="empty-icon">📭</div>
+          <h3>No sessions found</h3>
+          <p>
+            {filterSubject !== 'all' 
+              ? `No sessions for "${filterSubject}". Try a different filter.`
+              : "Start a session to get attendance reports!"}
+          </p>
         </div>
       )}
 
       {/* Attendance Details Modal */}
       {selectedSession && participants.length > 0 && (
-        <div
-          style={{
-            background: "#1e293b",
-            border: "2px solid #3b82f6",
-            borderRadius: "8px",
-            padding: "24px",
-            marginTop: "30px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "20px",
-            }}
-          >
-            <h2 style={{ color: "#f1f5f9", margin: 0 }}>
-              📋 Attendance Details (Session #{selectedSession})
-            </h2>
-            <button
-              onClick={() => {
-                setSelectedSession(null);
-                setParticipants([]);
-              }}
-              style={{
-                background: "#334155",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                padding: "8px 12px",
-                cursor: "pointer",
-                fontWeight: "600",
-              }}
-            >
-              ✕ Close
-            </button>
-          </div>
+        <div className="modal-overlay" onClick={() => { setSelectedSession(null); setParticipants([]); }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>📋 Attendance Details</h2>
+              <button
+                className="modal-close"
+                onClick={() => { setSelectedSession(null); setParticipants([]); }}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
 
-          <div style={{ overflowX: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: "14px",
-              }}
-            >
-              <thead>
-                <tr style={{ background: "#0f172a", borderBottom: "2px solid #3b82f6" }}>
-                  <th style={{ padding: "12px", textAlign: "left", color: "#60a5fa" }}>
-                    Student ID
-                  </th>
-                  <th style={{ padding: "12px", textAlign: "left", color: "#60a5fa" }}>
-                    Status
-                  </th>
-                  <th style={{ padding: "12px", textAlign: "left", color: "#60a5fa" }}>
-                    Joined At
-                  </th>
-                  <th style={{ padding: "12px", textAlign: "left", color: "#60a5fa" }}>
-                    Left At
-                  </th>
-                  <th style={{ padding: "12px", textAlign: "left", color: "#60a5fa" }}>
-                    Duration (min)
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {participants.map((p, idx) => (
-                  <tr
-                    key={idx}
-                    style={{
-                      borderBottom: "1px solid #334155",
-                      background: idx % 2 === 0 ? "#1e293b" : "#0f172a",
-                    }}
-                  >
-                    <td style={{ padding: "12px", color: "#e2e8f0" }}>
-                      👤 {p.user_id}
-                    </td>
-                    <td style={{ padding: "12px" }}>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "4px 8px",
-                          borderRadius: "4px",
-                          fontSize: "12px",
-                          fontWeight: "600",
-                          background: p.status === "joined" ? "#065f46" : "#1f2937",
-                          color: p.status === "joined" ? "#86efac" : "#9ca3af",
-                        }}
-                      >
-                        {p.status === "joined" ? "🟢 Joined" : "⚫ Left"}
-                      </span>
-                    </td>
-                    <td style={{ padding: "12px", color: "#cbd5e1" }}>
-                      {new Date(p.joined_at).toLocaleTimeString()}
-                    </td>
-                    <td style={{ padding: "12px", color: "#cbd5e1" }}>
-                      {p.left_at ? new Date(p.left_at).toLocaleTimeString() : "-"}
-                    </td>
-                    <td style={{ padding: "12px", color: "#cbd5e1" }}>
-                      {p.duration_seconds
-                        ? Math.round(p.duration_seconds / 60)
-                        : "-"}
-                    </td>
+            <div className="modal-stats">
+              <div className="stat">
+                <p className="stat-title">Total Attendees</p>
+                <p className="stat-number">{participants.length}</p>
+              </div>
+              <div className="stat">
+                <p className="stat-title">Avg Duration</p>
+                <p className="stat-number">
+                  {Math.round(
+                    participants.reduce((sum, p) => sum + (p.duration_seconds || 0), 0) /
+                      participants.length /
+                      60
+                  )} min
+                </p>
+              </div>
+            </div>
+
+            <div className="modal-table-wrapper">
+              <table className="modal-table">
+                <thead>
+                  <tr>
+                    <th>Student ID</th>
+                    <th>Status</th>
+                    <th>Joined At</th>
+                    <th>Left At</th>
+                    <th>Duration (min)</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {participants.map((p, idx) => (
+                    <tr key={idx} className={idx % 2 === 0 ? 'even' : 'odd'}>
+                      <td>👤 {p.user_id}</td>
+                      <td>
+                        <span className={`status-badge ${p.status}`}>
+                          {p.status === "joined" ? "🟢 Joined" : "⚫ Left"}
+                        </span>
+                      </td>
+                      <td>{new Date(p.joined_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                      <td>{p.left_at ? new Date(p.left_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "-"}</td>
+                      <td>{p.duration_seconds ? Math.round(p.duration_seconds / 60) : "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-          <div style={{ marginTop: "20px", color: "#cbd5e1" }}>
-            <p>
-              <strong>Total Attendees:</strong> {participants.length}
-            </p>
-            <p>
-              <strong>Avg Duration:</strong>{" "}
-              {Math.round(
-                participants.reduce((sum, p) => sum + (p.duration_seconds || 0), 0) /
-                  participants.length /
-                  60
-              )}{" "}
-              minutes
-            </p>
+            <button className="modal-close-btn" onClick={() => { setSelectedSession(null); setParticipants([]); }}>
+              Close
+            </button>
           </div>
         </div>
       )}

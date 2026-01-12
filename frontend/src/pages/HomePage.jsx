@@ -4,301 +4,183 @@ import "./HomePage.css";
 import MainHeader from "../components/MainHeader";
 import PosterCarousel from "../components/PosterCarousel"
 import EngagementCapture from "../components/EngagementCapture";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Footer from "../components/Footer";
 import "../styles/global.css";
 
 export default function HomePage() {
   const navigate = useNavigate();
   const [engageOn, setEngageOn] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
+  const [activeAlert, setActiveAlert] = useState(0);
+  const [tileHover, setTileHover] = useState(null);
+
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const alerts = [
+    "🔴 Registration for internal exam is opened",
+    "📅 Timetable released for S1–S6",
+    "✏️ Revaluation application started",
+    "📚 New academic calendar published"
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveAlert((prev) => (prev + 1) % alerts.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const tiles = [
+    { id: "notes", label: "NOTES", emoji: "📒", color: "tile-red", onClick: () => navigate("/notes") },
+    { id: "syllabus", label: "SYLLABUS", emoji: "🎓", color: "tile-pink", onClick: () => window.open("https://byjus.com/rrb-exams/rrb-syllabus/", "_blank") },
+    { id: "papers", label: "EXAM PAPERS", emoji: "📄", color: "tile-purple", onClick: () => navigate("/qpapers") },
+    { id: "upload", label: "UPLOAD NOTES", emoji: "☁️", color: "tile-amber", onClick: () => navigate("/notes") }
+  ];
 
   return (
-    <div className="home-root" style={{
-      background: "#0f172a",
-      minHeight: "100vh",
-      color: "#e2e8f0"
-    }}>
+    <div className="home-root">
+      {/* Animated background elements */}
+      <div className="background-orbs">
+        <div className="orb orb-1"></div>
+        <div className="orb orb-2"></div>
+        <div className="orb orb-3"></div>
+      </div>
+
       <MainHeader />
 
-      {/* Alert strip */}
-      <div className="home-alert-strip" style={{
-        background: "#1e293b",
-        borderBottom: "1px solid #334155"
-      }}>
-        <span className="home-alert-pill" style={{
-          background: "#dc2626",
-          color: "#fff"
-        }}>Alerts</span>
-
-        <div className="marquee-container">
-          <div className="marquee-text" style={{
-            color: "#cbd5e1"
-          }}>
-            Registration for internal exam is opened • 
-            Timetable released for S1–S6 • 
-            Revaluation application started • 
-            New academic calendar published • 
+      {/* Enhanced Alert Strip */}
+      <div className="home-alert-strip-enhanced">
+        <div className="alert-content">
+          <span className="home-alert-pill-pro">ALERTS</span>
+          <div className="alert-carousel">
+            {alerts.map((alert, idx) => (
+              <div
+                key={idx}
+                className={`alert-item ${idx === activeAlert ? "alert-active" : ""}`}
+              >
+                {alert}
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      <PosterCarousel />
+ 
 
-      {/* Banner / hero */}
-      <section className="home-hero" style={{
-        background: "linear-gradient(135deg, #1e3a8a 0%, #1e293b 100%)",
-        padding: "60px 20px",
-        textAlign: "center"
-      }}>
-        <div className="home-hero-text">
-          <p className="hero-tag" style={{
-            color: "#60a5fa",
-            fontSize: "14px",
-            fontWeight: "600",
-            marginBottom: "12px"
-          }}>Exam Updates</p>
-          
-          <h1 style={{
-            color: "#f1f5f9",
-            fontSize: "42px",
-            fontWeight: "bold",
-            marginBottom: "16px"
-          }}>Smart Classroom & Exam Prep</h1>
-          
-          <p className="hero-sub" style={{
-            color: "#cbd5e1",
-            fontSize: "18px",
-            marginBottom: "24px",
-            maxWidth: "600px",
-            margin: "0 auto 24px"
-          }}>
-            Access notes, exam papers, and solved QPs – all in one place.
+      {/* Hero Section - Premium */}
+      <section className="home-hero-premium">
+        <div className="hero-container">
+          {/* Left Content */}
+          <div className="hero-content">
+            <div className="hero-badge">
+              <span>✨ Smart Learning Platform</span>
+            </div>
+
+            <h1 className="hero-title">
+              <span className="gradient-text">Master Your Exams</span>
+              <span></span>
+              <span className="block"> with</span>
+                <span className="block"> Smart Prep</span>
+            </h1>
+
+            <p className="hero-description">
+              Access comprehensive notes, past exam papers, and solved solutions all in one intelligent platform. Study smarter, ace harder.
+            </p>
+
+            <div className="hero-buttons">
+              <button
+                className="btn-primary"
+                onClick={() => navigate("/notes")}
+              >
+                <span>Browse Notes</span>
+                <span className="btn-arrow">→</span>
+              </button>
+              <button className="btn-secondary">
+                Explore More
+              </button>
+            </div>
+
+            {/* Stats */}
+            <div className="hero-stats">
+              <div className="stat">
+                <p className="stat-number">10K+</p>
+                <p className="stat-label">Study Materials</p>
+              </div>
+              <div className="stat">
+                <p className="stat-number">500+</p>
+                <p className="stat-label">Exam Papers</p>
+              </div>
+              <div className="stat">
+                <p className="stat-number">50K+</p>
+                <p className="stat-label">Active Users</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right - Animated Card */}
+          <div className="hero-graphic">
+            <div className="hero-card-pro">
+              <div className="card-emoji">📚</div>
+              <p className="card-title">Study Smarter</p>
+              <p className="card-subtitle">Not Harder</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Grid Section */}
+      <section className="home-grid-premium">
+        <div className="grid-header">
+          <h2>Everything You Need</h2>
+          <p>Comprehensive resources designed for your academic success</p>
+        </div>
+
+        <div className="tiles-grid">
+          {tiles.map((tile, idx) => (
+            <div
+              key={tile.id}
+              className={`home-tile-pro ${tile.color}`}
+              onMouseEnter={() => setTileHover(tile.id)}
+              onMouseLeave={() => setTileHover(null)}
+              onClick={tile.onClick}
+              style={{ animationDelay: `${idx * 0.1}s` }}
+            >
+              <div className="tile-gradient"></div>
+              <div className="tile-border"></div>
+              <div className="tile-shine"></div>
+              
+              <div className="tile-content">
+                <div className={`tile-emoji ${tileHover === tile.id ? "emoji-hover" : ""}`}>
+                  {tile.emoji}
+                </div>
+                <h3 className="tile-label-pro">{tile.label}</h3>
+                <div className="tile-underline"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="home-cta-section">
+        <div className="cta-inner">
+          <h2 className="cta-title">Ready to Transform Your Learning?</h2>
+          <p className="cta-description">
+            Join thousands of students who are achieving their academic goals with our comprehensive study platform.
           </p>
-          
           <button
-            className="hero-cta"
+            className="btn-primary"
             onClick={() => navigate("/notes")}
-            style={{
-              padding: "14px 32px",
-              fontSize: "16px",
-              fontWeight: "600",
-              background: "#3b82f6",
-              color: "#fff",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              transition: "all 0.3s ease",
-            }}
-            onMouseEnter={(e) => e.target.style.background = "#1d4ed8"}
-            onMouseLeave={(e) => e.target.style.background = "#3b82f6"}
           >
-            Browse Notes
+            Start Learning Now
           </button>
         </div>
-
-        <div className="home-hero-graphic" style={{
-          marginTop: "40px"
-        }}>
-          <div className="hero-card" style={{
-            background: "#1e3a8a",
-            border: "2px solid #3b82f6",
-            padding: "32px",
-            borderRadius: "12px",
-            textAlign: "center",
-            color: "#e2e8f0"
-          }}>
-            <span className="hero-emoji" style={{
-              fontSize: "48px",
-              display: "block",
-              marginBottom: "16px"
-            }}>📚</span>
-            <p style={{
-              fontSize: "18px",
-              margin: "0",
-              color: "#cbd5e1"
-            }}>Study smarter, not harder.</p>
-          </div>
-        </div>
       </section>
-
-      {/* Round buttons grid */}
-      <section className="home-grid" style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-        gap: "20px",
-        padding: "60px 20px",
-        maxWidth: "1200px",
-        margin: "0 auto"
-      }}>
-        
-        {/* NOTES */}
-        <div 
-          className="home-tile red"
-          onClick={() => navigate("/notes")}
-          style={{
-            background: "linear-gradient(135deg, #7f1d1d 0%, #5f0f0f 100%)",
-            padding: "40px 20px",
-            borderRadius: "12px",
-            textAlign: "center",
-            cursor: "pointer",
-            transition: "all 0.3s ease",
-            border: "2px solid #dc2626",
-            minHeight: "200px",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center"
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-8px)";
-            e.currentTarget.style.boxShadow = "0 12px 24px rgba(220, 38, 38, 0.2)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
-            e.currentTarget.style.boxShadow = "none";
-          }}
-        >
-          <div className="tile-icon" style={{
-            fontSize: "48px",
-            marginBottom: "12px"
-          }}>
-            📒
-          </div>
-          <div className="tile-label" style={{
-            color: "#fca5a5",
-            fontWeight: "600",
-            fontSize: "16px"
-          }}>NOTES</div>
-        </div>
-
-        {/* SYLLABUS */}
-        <div 
-          className="home-tile pink"
-          onClick={() => window.open("https://byjus.com/rrb-exams/rrb-syllabus/", "_blank")}
-          style={{
-            background: "linear-gradient(135deg, #831843 0%, #500724 100%)",
-            padding: "40px 20px",
-            borderRadius: "12px",
-            textAlign: "center",
-            cursor: "pointer",
-            transition: "all 0.3s ease",
-            border: "2px solid #ec4899",
-            minHeight: "200px",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center"
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-8px)";
-            e.currentTarget.style.boxShadow = "0 12px 24px rgba(236, 72, 153, 0.2)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
-            e.currentTarget.style.boxShadow = "none";
-          }}
-        >
-          <div className="tile-icon" style={{
-            fontSize: "48px",
-            marginBottom: "12px"
-          }}>
-            🎓
-          </div>
-          <div className="tile-label" style={{
-            color: "#f472b6",
-            fontWeight: "600",
-            fontSize: "16px"
-          }}>SYLLABUS</div>
-        </div>
-
-        {/* EXAM PAPERS */}
-        <div 
-          className="home-tile purple"
-          onClick={() => navigate("/qpapers")}
-          style={{
-            background: "linear-gradient(135deg, #6d28d9 0%, #4c1d95 100%)",
-            padding: "40px 20px",
-            borderRadius: "12px",
-            textAlign: "center",
-            cursor: "pointer",
-            transition: "all 0.3s ease",
-            border: "2px solid #a855f7",
-            minHeight: "200px",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center"
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-8px)";
-            e.currentTarget.style.boxShadow = "0 12px 24px rgba(168, 85, 247, 0.2)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
-            e.currentTarget.style.boxShadow = "none";
-          }}
-        >
-          <div className="tile-icon" style={{
-            fontSize: "48px",
-            marginBottom: "12px"
-          }}>
-            📄
-          </div>
-          <div className="tile-label" style={{
-            color: "#d8b4fe",
-            fontWeight: "600",
-            fontSize: "16px"
-          }}>EXAM PAPERS</div>
-        </div>
-
-        {/* UPLOAD NOTES */}
-        <div 
-          className="home-tile yellow"
-          onClick={() => navigate("/notes")}
-          style={{
-            background: "linear-gradient(135deg, #78350f 0%, #451a03 100%)",
-            padding: "40px 20px",
-            borderRadius: "12px",
-            textAlign: "center",
-            cursor: "pointer",
-            transition: "all 0.3s ease",
-            border: "2px solid #d97706",
-            minHeight: "200px",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center"
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-8px)";
-            e.currentTarget.style.boxShadow = "0 12px 24px rgba(217, 119, 6, 0.2)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
-            e.currentTarget.style.boxShadow = "none";
-          }}
-        >
-          <div className="tile-icon" style={{
-            fontSize: "48px",
-            marginBottom: "12px"
-          }}>
-            ☁️
-          </div>
-          <div className="tile-label" style={{
-            color: "#fcd34d",
-            fontWeight: "600",
-            fontSize: "16px"
-          }}>UPLOAD NOTES</div>
-        </div>
-      </section>
-
-      {/* Camera toggle button */}
-      <div style={{
-        textAlign: "center",
-        padding: "20px"
-      }}>
-       
-      </div>
 
       {engageOn && (
         <EngagementCapture 

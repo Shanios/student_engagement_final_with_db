@@ -10,9 +10,10 @@ from engagement import router as engagement_router
 from rag_api import router as rag_api_router
 from models import User, EngagementSession, EngagementPoint
 from models import Base
+from database import engine
 from threading import Thread
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta,timezone
 from database import SessionLocal
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -26,7 +27,7 @@ from analytics import get_comprehensive_analytics, generate_summary_report
 from reports import create_report_package, export_to_whatsapp_format
 
 load_dotenv()  # Load from .env file
-Base.metadata.create_all(bind=engine)
+
 app = FastAPI()
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
@@ -67,6 +68,13 @@ def home():
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+@app.on_event("startup")
+def warmup_ml():
+    try:
+        load_ml_model()
+        print("ML model warmed up")
+    except Exception as e:
+        print("ML warmup failed", e)
 
 
 @app.post("/api/chat", response_model=ChatResponse)
@@ -77,17 +85,15 @@ def chat(
     ans = answer_question(payload.question)
     return ChatResponse(answer=ans)
 
+@app.on_event("startup")
+def start_watchdog():
+    Thread(target=session_watchdog, daemon=True).start()
 
-# ====== SESSION WATCHDOG (AUTO-END INACTIVE SESSIONS) ======
 def session_watchdog():
-    """
-    Background thread that auto-ends sessions that haven't had heartbeats.
-    Prevents sessions from staying open indefinitely.
-    """
     while True:
         db = SessionLocal()
         try:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             timeout = timedelta(seconds=30)
 
             sessions = db.query(EngagementSession).filter(
@@ -105,10 +111,11 @@ def session_watchdog():
         finally:
             db.close()
 
-        time.sleep(10)
+        time.sleep(60)
 
 
-Thread(target=session_watchdog, daemon=True).start()
+
+
 
 
 # ====== ✅ NEW: BACKGROUND JOB FOR REPORT GENERATION ======
@@ -269,7 +276,7 @@ app.include_router(engagement_router)    # /api/engagement/...
 app.include_router(video_router)         # /api/video/...
 app.include_router(rag_api_router)       # /api/rag/...
 app.include_router(attendance_router)    # /api/attendance/...
-
+Base.metadata.create_all(bind=engine)
 
 # ✅ NOTE: Analytics router will be added separately as analytics_router.py
 # For now, the endpoints are handled in main.py above

@@ -14,7 +14,8 @@ export default function SessionReportDashboard() {
   const [error, setError] = useState(null);
   const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
-
+  const [emailSuccess, setEmailSuccess] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
   useEffect(() => {
     fetchReport();
   }, [sessionId]);
@@ -37,43 +38,111 @@ export default function SessionReportDashboard() {
     }
   };
 
-  const downloadPDF = async () => {
-    try {
-      setSending(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${API}/api/engagement/sessions/${sessionId}/report/pdf`,
-        { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }
-      );
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `engagement_report_${sessionId}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentElement.removeChild(link);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSending(false);
+const downloadExcel = async () => {
+  try {
+    setSending(true);
+    const token = localStorage.getItem('token');
+    
+    console.log("🔍 DEBUG - Download CSV:");
+    console.log("- Session ID:", sessionId);
+    console.log("- Token exists:", !!token);
+    console.log("- Endpoint:", `${API}/api/attendance/session/${sessionId}/download`);
+    
+    const response = await axios.get(
+      `${API}/api/attendance/session/${sessionId}/download`,
+      { 
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }, 
+        responseType: 'blob' 
+      }
+    );
+    
+    console.log("✅ Download response:", response.status, response.headers);
+    
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `session_${sessionId}_attendance.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.parentElement.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    console.log('✅ CSV downloaded successfully');
+    alert('✅ Attendance CSV downloaded!');
+    
+  } catch (err) {
+    console.error('❌ Download failed:', err);
+    
+    // Detailed error logging
+    if (err.response) {
+      console.log("📡 Response status:", err.response.status);
+      console.log("📡 Response data:", err.response.data);
+      console.log("📡 Response headers:", err.response.headers);
     }
-  };
+    
+    alert(`❌ Failed to download: ${err.message}`);
+  } finally {
+    setSending(false);
+  }
+};
 
-  const sendViaEmail = async () => {
-    try {
-      setSending(true);
-      const token = localStorage.getItem('token');
-      await axios.post(
-        `${API}/api/engagement/sessions/${sessionId}/email-report`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setSending(false);
-    } catch (err) {
-      console.error(err);
-      setSending(false);
+const sendViaEmail = async () => {
+  try {
+    setSending(true);
+    const token = localStorage.getItem('token');
+    
+    console.log("📧 DEBUG - Send Email:");
+    console.log("- Session ID:", sessionId);
+    console.log("- Token exists:", !!token);
+    console.log("- Endpoint:", `${API}/api/attendance/session/${sessionId}/send-email`);
+    
+    const response = await axios.post(
+      `${API}/api/attendance/session/${sessionId}/send-email`,
+      {},
+      { 
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        } 
+      }
+    );
+
+    console.log('✅ Email response:', response.data);
+    alert('✅ Engagement report sent to your email!');
+    
+  } catch (err) {
+    console.error('❌ Email send failed:', err);
+    
+    // Detailed error logging
+    if (err.response) {
+      console.log("📡 Response status:", err.response.status);
+      console.log("📡 Response data:", err.response.data);
+      console.log("📡 Response headers:", err.response.headers);
+    } else if (err.request) {
+      console.log("📡 No response received:", err.request);
     }
-  };
+    
+    let errorMessage = 'Failed to send email';
+    if (err.response?.status === 404) {
+      errorMessage = 'Email endpoint not found (404). Check backend routes.';
+    } else if (err.response?.status === 403) {
+      errorMessage = 'Permission denied (403).';
+    } else if (err.response?.status === 500) {
+      errorMessage = 'Server error (500). Check backend logs.';
+    } else if (err.code === 'ERR_NETWORK') {
+      errorMessage = 'Network error. Check if backend is running.';
+    } else if (err.response?.data?.detail) {
+      errorMessage = err.response.data.detail;
+    }
+    
+    alert(`❌ ${errorMessage}`);
+  } finally {
+    setSending(false);
+  }
+};
 
   if (loading) {
     return (
@@ -176,10 +245,10 @@ export default function SessionReportDashboard() {
         {/* Action Buttons */}
         <div className="action-bar">
           <button
-            onClick={downloadPDF}
+            onClick={downloadExcel}
             disabled={sending}
             className="action-btn download-btn"
-            title="Download report as PDF"
+            title="Download attedance as excel"
           >
             <Download size={20} />
             <span>Download Excel</span>
@@ -456,11 +525,18 @@ export default function SessionReportDashboard() {
         <div className="report-footer">
           <div className="footer-info">
             <p>Session ID: <code>{sessionId}</code></p>
-           <p>
-  Generated:{" "}
-  {new Date(report.generated_at + "Z").toLocaleString()}
-</p>
-
+            <p>
+              Session Date:{" "}
+              {report.started_at
+                ? new Date(report.started_at).toLocaleString()
+                : "-"}
+            </p>
+            {/* <p>
+              Report Generated:{" "}
+              {report.generated_at
+                ? new Date(report.generated_at).toLocaleString()
+                : "-"}
+            </p> */}
           </div>
           <button onClick={() => navigate('/teacher/sessions')} className="btn btn-secondary">
             View All Sessions

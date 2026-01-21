@@ -1,5 +1,5 @@
 # backend/engagement.py
-from datetime import datetime
+from datetime import datetime,timezone
 from typing import List, Optional
 from models import DeviceLog
 from fastapi import APIRouter,Header, Depends, HTTPException, Query, UploadFile, File, Request,BackgroundTasks
@@ -18,21 +18,24 @@ import base64
 import io
 from PIL import Image
 
+
 import subprocess
 import psutil
 
 from pathlib import Path
 from auth import create_access_token  # Add this
 import numpy as np
-ACTIVE_ML_PROCESSES = {}
-router = APIRouter(prefix="/api/engagement", tags=["engagement"])
-# Move this to line 30-35 (right after imports):
+
 def get_db():
-    db = SessionLocal()
+    """Dependency to get database session"""
+    db = SessionLocal()  # ✅ Create session using SessionLocal
     try:
         yield db
     finally:
         db.close()
+# ========== GLOBAL VARIABLES ==========
+ACTIVE_ML_PROCESSES = {}
+router = APIRouter(prefix="/api/engagement", tags=["engagement"])      
 def get_ml_script_path():
     """
     Get absolute path to realtime_engagement.py
@@ -68,9 +71,9 @@ def get_ml_script_path():
     candidates.append(project_root / "engagement" / "realtime_engagement.py")
     candidates.append(project_root / "backend" / "engagement" / "realtime_engagement.py")
     
-    # 4. Absolute paths
-    candidates.append(Path("D:\\student_engagement\\backend\\engagement\\realtime_engagement.py"))
-    candidates.append(Path("D:\\student_engagement\\engagement\\realtime_engagement.py"))
+    # # 4. Absolute paths
+    # candidates.append(Path("D:\\student_engagement\\backend\\engagement\\realtime_engagement.py"))
+    # candidates.append(Path("D:\\student_engagement\\engagement\\realtime_engagement.py"))
     
     # Search
     print("Searching locations:")
@@ -147,130 +150,173 @@ def start_ml_process(
 ):
     """Start ML process with correct environment setup"""
     
-    print(f"\n{'='*80}")
-    print(f"🧠 ML START REQUEST - Session {session_id}, Student {current_user.id}")
-    print(f"{'='*80}\n")
-    
-    if current_user.role != "student":
-        raise HTTPException(403, "Only students can start ML")
-    
-    session = db.query(EngagementSession).filter(
-        EngagementSession.id == session_id
-    ).first()
-    
-    if not session:
-        raise HTTPException(404, "Session not found")
-    
-    if session.ended_at is not None:
-        raise HTTPException(400, "Session has already ended")
-    
-    from models import Attendance
-    attendance = db.query(Attendance).filter(
-        Attendance.session_id == session_id,
-        Attendance.student_id == current_user.id
-    ).first()
-    
-    
-    if not attendance:
-        raise HTTPException(403, "Student has not joined this session")
-    
-    if session_id in ACTIVE_ML_PROCESSES:
-        proc = ACTIVE_ML_PROCESSES[session_id]
-        if proc.poll() is None:
-            return {"status": "already_running", "session_id": session_id, "pid": proc.pid}
-        else:
-            del ACTIVE_ML_PROCESSES[session_id]
-    
     try:
-        import sys
-        python_exe = sys.executable
-        
-        ml_script = get_ml_script_path()
-        ml_token = create_access_token(data={"sub": str(current_user.id)})
-        
-        ml_script_abs = str(Path(ml_script).resolve())
-        script_dir = str(Path(ml_script_abs).parent)
-        
-        cmd = [
-            python_exe,
-            ml_script_abs,
-            f"--session-id={session_id}",
-            f"--student-id={current_user.id}",
-            f"--token={ml_token}",
-            f"--backend=http://127.0.0.1:8000",
-        ]
-        
-        print(f"📄 Script: {ml_script_abs}")
-        print(f"📂 Working Dir: {script_dir}")
-        print(f"🐍 Python: {python_exe}\n")
-        
-        # ✅ CRITICAL: Prepare environment with all necessary variables
-        env = os.environ.copy()
-        env["CAMERA_DEVICE_KEY"] = os.getenv("CAMERA_DEVICE_KEY", "default-device-key")
-        env["PYTHONUNBUFFERED"] = "1"
-        
-        print(f"🔐 CAMERA_DEVICE_KEY: {env['CAMERA_DEVICE_KEY']}")
-        print(f"🌍 PYTHONPATH: {env.get('PYTHONPATH', 'not set')}\n")
-        
-        # ✅ SPAWN WITH CORRECT WORKING DIRECTORY
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            env=env,
-            cwd=script_dir,  # ✅ CRITICAL: Same directory as manual run
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0,
-            start_new_session=True if os.name != 'nt' else False,
-        )
-        
-        print(f"✅ Process spawned: PID {proc.pid}")
-        print(f"⏳ Waiting 3 seconds to check for immediate crashes...\n")
-        
-        import time
-        time.sleep(3)
-        
-        returncode = proc.poll()
-        
-        if returncode is not None:
-            stdout, stderr = proc.communicate()
-            
-            print(f"\n{'='*80}")
-            print(f"❌ ML PROCESS CRASHED - Exit Code: {returncode}")
-            print(f"{'='*80}")
-            print(f"\n📋 STDERR:\n{stderr if stderr else '(empty)'}")
-            print(f"\n📋 STDOUT:\n{stdout if stdout else '(empty)'}")
-            print(f"\n{'='*80}\n")
-            
-            # Also save to file
-            with open("ml_crash_log.txt", "w") as f:
-                f.write(f"Exit Code: {returncode}\n\n")
-                f.write(f"STDERR:\n{stderr}\n\n")
-                f.write(f"STDOUT:\n{stdout}\n")
-            
-            raise HTTPException(500, f"ML crashed with exit code {returncode}")
-        
-        ACTIVE_ML_PROCESSES[session_id] = proc
-        
-        print(f"{'='*80}")
-        print(f"✅ ML PROCESS RUNNING")
-        print(f"   PID: {proc.pid}")
-        print(f"   Session: {session_id}")
-        print(f"   Directory: {script_dir}")
+        print(f"\n{'='*80}")
+        print(f"🧠 ML START REQUEST - Session {session_id}, Student {current_user.id}")
         print(f"{'='*80}\n")
         
-        return {
-            "status": "started",
-            "session_id": session_id,
-            "pid": proc.pid,
-            "message": "ML engagement tracking active"
-        }
+        # DEBUG: Check env vars
+        print(f"DEBUG: DISABLE_LOCAL_ML = {os.getenv('DISABLE_LOCAL_ML')}")
+        print(f"DEBUG: ENV = {os.getenv('ENV')}")
+        print(f"DEBUG: current_user.role = {current_user.role}\n")
         
-    except FileNotFoundError as e:
-        print(f"❌ File not found: {e}\n")
-        raise HTTPException(500, str(e))
+        if current_user.role != "student":
+            raise HTTPException(403, "Only students can start ML")
+        
+        print("✅ Role check passed\n")
+        
+        if os.getenv("DISABLE_LOCAL_ML") == "true":
+            print("❌ DISABLE_LOCAL_ML is true, raising 503\n")
+            raise HTTPException(503, "Local ML execution is disabled in production")
+
+        print("✅ DISABLE_LOCAL_ML check passed\n")
+
+        session = db.query(EngagementSession).filter(
+            EngagementSession.id == session_id
+        ).first()
+        
+        print(f"✅ Session query done: {session}\n")
+        
+        if not session:
+            raise HTTPException(404, "Session not found")
+        
+        if session.ended_at is not None:
+            raise HTTPException(400, "Session has already ended")
+        
+        print("✅ Session validation passed\n")
+        
+        from models import Attendance
+        attendance = db.query(Attendance).filter(
+            Attendance.session_id == session_id,
+            Attendance.student_id == current_user.id
+        ).first()
+        
+        print(f"✅ Attendance query done: {attendance}\n")
+        
+        if not attendance:
+            raise HTTPException(403, "Student has not joined this session")
+        
+        print("✅ Attendance validation passed\n")
+        
+        if session_id in ACTIVE_ML_PROCESSES:
+            proc = ACTIVE_ML_PROCESSES[session_id]
+            if proc.poll() is None:
+                return {"status": "already_running", "session_id": session_id, "pid": proc.pid}
+            else:
+                del ACTIVE_ML_PROCESSES[session_id]
+        
+        print("✅ Active process check passed\n")
+        
+        try:
+            import sys
+            python_exe = sys.executable
+            
+            print(f"⏳ Getting ML script path...\n")
+            ml_script = get_ml_script_path()
+            print(f"✅ ML script path: {ml_script}\n")
+            
+            print(f"⏳ Creating ML token...\n")
+            ml_token = create_access_token(data={"sub": str(current_user.id)})
+            print(f"✅ ML token created\n")
+            
+            ml_script_abs = str(Path(ml_script).resolve())
+            script_dir = str(Path(ml_script_abs).parent)
+            
+            cmd = [
+                python_exe,
+                ml_script_abs,
+                f"--session-id={session_id}",
+                f"--student-id={current_user.id}",
+                f"--token={ml_token}",
+                f"--backend=http://127.0.0.1:8000",
+            ]
+            
+            print(f"📄 Script: {ml_script_abs}")
+            print(f"📂 Working Dir: {script_dir}")
+            print(f"🐍 Python: {python_exe}\n")
+            
+            env = os.environ.copy()
+            env["CAMERA_DEVICE_KEY"] = os.getenv("CAMERA_DEVICE_KEY", "default-device-key")
+            env["PYTHONUNBUFFERED"] = "1"
+            
+            print(f"🔐 CAMERA_DEVICE_KEY: {env['CAMERA_DEVICE_KEY']}")
+            print(f"🌍 PYTHONPATH: {env.get('PYTHONPATH', 'not set')}\n")
+            
+            if os.getenv("ENV") == "production":
+                print("❌ ENV is production, raising 501\n")
+                raise HTTPException(501, "Real-time ML is not enabled in production yet")
+
+            print("✅ Production check passed\n")
+            print("⏳ Spawning subprocess...\n")
+            
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                env=env,
+                cwd=script_dir,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0,
+                start_new_session=True if os.name != 'nt' else False,
+            )
+            
+            print(f"✅ Process spawned: PID {proc.pid}")
+            print(f"⏳ Waiting 3 seconds to check for immediate crashes...\n")
+            
+            import time
+            time.sleep(3)
+            
+            returncode = proc.poll()
+            
+            if returncode is not None:
+                stdout, stderr = proc.communicate()
+                
+                print(f"\n{'='*80}")
+                print(f"❌ ML PROCESS CRASHED - Exit Code: {returncode}")
+                print(f"{'='*80}")
+                print(f"\n📋 STDERR:\n{stderr if stderr else '(empty)'}")
+                print(f"\n📋 STDOUT:\n{stdout if stdout else '(empty)'}")
+                print(f"\n{'='*80}\n")
+                
+                with open("ml_crash_log.txt", "w") as f:
+                    f.write(f"Exit Code: {returncode}\n\n")
+                    f.write(f"STDERR:\n{stderr}\n\n")
+                    f.write(f"STDOUT:\n{stdout}\n")
+                
+                raise HTTPException(500, f"ML crashed with exit code {returncode}")
+            
+            ACTIVE_ML_PROCESSES[session_id] = proc
+            
+            print(f"{'='*80}")
+            print(f"✅ ML PROCESS RUNNING")
+            print(f"   PID: {proc.pid}")
+            print(f"   Session: {session_id}")
+            print(f"   Directory: {script_dir}")
+            print(f"{'='*80}\n")
+            
+            return {
+                "status": "started",
+                "session_id": session_id,
+                "pid": proc.pid,
+                "message": "ML engagement tracking active"
+            }
+            
+        except FileNotFoundError as e:
+            print(f"❌ FileNotFoundError: {e}\n")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(500, str(e))
+        except Exception as e:
+            print(f"❌ Exception in ML spawn: {e}\n")
+            import traceback
+            traceback.print_exc()
+            raise
+            
+    except HTTPException as he:
+        print(f"🔴 HTTPException raised: {he.status_code} - {he.detail}\n")
+        raise
     except Exception as e:
-        print(f"❌ Exception: {e}\n")
+        print(f"🔴 Unexpected exception: {e}\n")
         import traceback
         traceback.print_exc()
         raise HTTPException(500, str(e))
@@ -518,7 +564,7 @@ class SessionDetailOut(BaseModel):
     ended_at: Optional[datetime]
     mute_students: bool
     disable_student_cameras: bool
-    is_locked: bool
+    
 @router.post("/sessions", response_model=SessionOut)
 def create_session(
     payload: SessionCreate,
@@ -529,7 +575,7 @@ def create_session(
         raise HTTPException(403, "Only teachers can start engagement sessions")
 
     # ✅ NEW: Generate unique share code
-    share_code = generate_share_code()
+    share_code = generate_share_code().upper()
     
     session = EngagementSession(
         title=payload.title,
@@ -559,7 +605,8 @@ def get_session(
     current_user: User = Depends(get_current_user),
 ):
     session = db.query(EngagementSession).filter(
-        EngagementSession.id == session_id
+        EngagementSession.id == session_id,
+        EngagementSession.is_deleted == False
     ).first()
 
     if not session:
@@ -635,7 +682,8 @@ def end_session(
         return {"status": "already_ended", "session_id": session_id}
 
     # ✅ Set session end time
-    end_time = datetime.utcnow()
+    end_time = datetime.now(timezone.utc)
+
     session.ended_at = end_time
     print(f"✅ Session marked as ended at: {end_time}")
 
@@ -654,7 +702,7 @@ def end_session(
         
         # Update student record
         attendance.left_at = end_time
-        attendance.total_duration_seconds = duration_seconds
+        attendance.total_duration_seconds += duration_seconds
         
         print(f"   [{idx}] Student {attendance.student_id}:")
         print(f"        Joined: {attendance.joined_at}")
@@ -715,7 +763,8 @@ def heartbeat(
 
     # ✅ ONLY update session timestamp
     # ⚠️ Do NOT create/modify attendance here
-    session.last_seen_at = datetime.utcnow()
+    session.last_seen_at = datetime.now(timezone.utc)
+
     db.commit()
 
     print(f"💓 Heartbeat from {current_user.role} {current_user.id} for session {session_id}")
@@ -749,7 +798,8 @@ def join_session(
    # Find session by share code (case-insensitive)
     code_to_find = payload.share_code.strip().upper()
     session = db.query(EngagementSession).filter(
-       EngagementSession.share_code.ilike(code_to_find)
+       EngagementSession.share_code == code_to_find,
+       EngagementSession.is_deleted == False
     ).first()
 
     if not session:
@@ -796,7 +846,8 @@ def join_session(
 #     attendance = Attendance(
 #         session_id=session_id,
 #         student_id=current_user.id,
-#         joined_at=datetime.utcnow()
+#         joined_at=datetime.now(timezone.utc)
+
 #     )
     
     # db.add(attendance)
@@ -835,7 +886,8 @@ def stream_engagement(
 
     # 2️⃣ Validate session exists and is active
     session = db.query(EngagementSession).filter(
-        EngagementSession.id == session_id
+        EngagementSession.id == session_id,
+        EngagementSession.is_deleted == False
     ).first()
 
     if not session:
@@ -865,7 +917,8 @@ def stream_engagement(
         )
 
     # 4️⃣ Store engagement point (time-series)
-    ts = payload.timestamp or datetime.utcnow()
+    ts = payload.timestamp or datetime.now(timezone.utc)
+
 
     point = EngagementPoint(
         session_id=session_id,
@@ -918,7 +971,8 @@ def add_point(
     print(f"   Timestamp: {payload.timestamp}")
     print(f"{'='*60}\n")
     session = db.query(EngagementSession).filter(
-        EngagementSession.id == session_id
+        EngagementSession.id == session_id,
+        EngagementSession.is_deleted == False
     ).first()
 
     if not session:
@@ -930,7 +984,8 @@ def add_point(
             detail="Engagement session has ended. Uploads are disabled."
         )
 
-    ts = payload.timestamp or datetime.utcnow()
+    ts = payload.timestamp or datetime.now(timezone.utc)
+
 
     point = EngagementPoint(
         session_id=session_id,
@@ -977,7 +1032,8 @@ def get_series_updates(
 ):
     # ✅ NEW: Verify session exists and is still active
     session = db.query(EngagementSession).filter(
-        EngagementSession.id == session_id
+        EngagementSession.id == session_id,
+        EngagementSession.is_deleted == False
     ).first()
 
     if not session:
@@ -996,7 +1052,8 @@ def get_series_updates(
 
     if since:
         try:
-            since_dt = datetime.fromisoformat(since)
+            since_dt = datetime.fromisoformat(since).astimezone(timezone.utc)
+
             q = q.filter(EngagementPoint.timestamp > since_dt)
         except Exception:
             raise HTTPException(400, "Invalid 'since' timestamp")
@@ -1011,7 +1068,8 @@ def get_series(
 ):
     # ✅ NEW: Verify session exists
     session = db.query(EngagementSession).filter(
-        EngagementSession.id == session_id
+        EngagementSession.id == session_id,
+        EngagementSession.is_deleted == False
     ).first()
 
     if not session:
@@ -1038,7 +1096,8 @@ def get_session_analytics(
         raise HTTPException(404, "Session not found")
 
     points = db.query(EngagementPoint).filter(
-        EngagementPoint.session_id == session_id
+        EngagementPoint.session_id == session_id,
+        EngagementSession.is_deleted == False
     ).all()
 
     if not points:
@@ -1054,7 +1113,8 @@ def get_session_analytics(
     scores = [p.score for p in points]
 
     # Duration
-    end_time = session.ended_at or datetime.utcnow()
+    end_time = session.ended_at or datetime.now(timezone.utc)
+
     duration = int((end_time - session.started_at).total_seconds())
 
     return SessionAnalyticsOut(
@@ -1136,7 +1196,10 @@ def get_teacher_sessions(
     
     sessions = db.query(EngagementSession).filter(
         EngagementSession.teacher_id == current_user.id,
-        EngagementSession.ended_at.isnot(None)  # Only ended sessions
+        
+        EngagementSession.ended_at.isnot(None),
+        EngagementSession.is_deleted == False 
+          # Only ended sessions
     ).order_by(EngagementSession.ended_at.desc()).all()  # Newest first
     
     # Build response with statistics
@@ -1202,7 +1265,8 @@ def get_teacher_session_summary(
     
     sessions = db.query(EngagementSession).filter(
         EngagementSession.teacher_id == current_user.id,
-        EngagementSession.ended_at.isnot(None)
+        EngagementSession.ended_at.isnot(None),
+        EngagementSession.is_deleted == False
     ).order_by(EngagementSession.ended_at.desc()).all()
     
     result = []
@@ -1239,7 +1303,8 @@ def get_advanced_analytics(
     from analytics import get_all_advanced_analytics
     
     session = db.query(EngagementSession).filter(
-        EngagementSession.id == session_id
+        EngagementSession.id == session_id,
+        EngagementSession.is_deleted == False
     ).first()
     
     if not session:
@@ -1337,7 +1402,8 @@ def get_session_report(
     
     # Verify teacher owns session
     session = db.query(EngagementSession).filter(
-        EngagementSession.id == session_id
+        EngagementSession.id == session_id,
+        EngagementSession.is_deleted == False
     ).first()
     
     if not session:
@@ -1385,7 +1451,8 @@ def get_session_report(
             "duration_minutes": duration_minutes,
             "duration_seconds": duration_seconds,
             "duration_formatted": duration_formatted,
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": datetime.now(timezone.utc)
+.isoformat(),
             
             "analytics": {
                 "summary": {
@@ -1452,7 +1519,8 @@ def get_session_report(
         "duration_minutes": duration_minutes,
         "duration_seconds": duration_seconds,
         "duration_formatted": duration_formatted,
-        "generated_at": datetime.utcnow().isoformat(),
+        "generated_at": datetime.now(timezone.utc)
+.isoformat(),
         
         "analytics": {
             "summary": analytics.get('summary', {}),

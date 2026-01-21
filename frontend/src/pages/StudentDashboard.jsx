@@ -222,10 +222,12 @@ export default function StudentDashboard() {
                 <strong>Subject:</strong> {sessionInfo.subject}
               </p>
             )}
-            <p style={{ margin: "0 0 12px 0", color: "#d1fae5" }}>
-              <strong>Started:</strong>{" "}
-              {new Date(sessionInfo.started_at).toLocaleTimeString()}
-            </p>
+<p style={{ margin: "0 0 12px 0", color: "#d1fae5" }}>
+  <strong>Started:</strong>{" "}
+  {sessionInfo.started_at
+    ? new Date(sessionInfo.started_at + "Z").toLocaleTimeString()
+    : "-"}
+</p>
 
             {/* ✅ NEW: Action buttons */}
             <div style={{ display: "flex", gap: "10px" }}>

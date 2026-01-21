@@ -1,29 +1,7 @@
-🟢 Debug log started at 2026-01-12T12:34:25.003570
+🟢 Debug log started at 2026-01-20T17:38:41.746984
 🟢 [1] main() started
 🟢 [2] model loaded
 🟢 [3] retry thread started
 🟢 [4] CSV log opened
-🎥 Trying camera 1...
-✅ Successfully using camera 1
-🟢 [5] Camera opened successfully
-🟢 [6] Signal handlers registered
-🟢 [7] Face mesh initialized
-🟢 [8] Starting frame loop
-🎯 UPLOAD TRIGGERED | Status: NO FACE (DECAY) | Prob: 0.050
-📤 POST http://127.0.0.1:8000/api/engagement/sessions/26/points | Score: 0.050, EAR: N/A
-✅ Upload success (200)
-🟢 Progress: 100 frames, 1 uploads, 0 faces
-🟢 Progress: 200 frames, 1 uploads, 0 faces
-🟢 Progress: 300 frames, 1 uploads, 0 faces
-🟢 Progress: 400 frames, 1 uploads, 0 faces
-🟢 Progress: 500 frames, 1 uploads, 0 faces
-🟢 Progress: 600 frames, 1 uploads, 0 faces
-🟢 Progress: 700 frames, 1 uploads, 0 faces
-🟢 Progress: 800 frames, 1 uploads, 0 faces
-🟢 Progress: 900 frames, 1 uploads, 0 faces
-🟢 Progress: 1000 frames, 1 uploads, 0 faces
-🟢 Progress: 1100 frames, 1 uploads, 0 faces
-🟢 Progress: 1200 frames, 1 uploads, 0 faces
-🟢 Progress: 1300 frames, 1 uploads, 0 faces
-🟢 Progress: 1400 frames, 1 uploads, 0 faces
-🟢 Progress: 1500 frames, 1 uploads, 0 faces
+🎥 Opening camera 0...
+❌ [5] Camera opened but cannot read frames

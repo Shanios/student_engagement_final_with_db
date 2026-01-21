@@ -27,7 +27,8 @@ frontend/.env*
 backend/node_modules/
 backend/__pycache__/
 backend/*.log
-
+backend/fix_db.py
+fix_db.py
 
 # ======================
 # EXECUTABLES

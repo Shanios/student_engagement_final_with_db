@@ -92,7 +92,7 @@ export default function MainHeader() {
               <NavLink to="/student/dashboard" className={linkClass}>
                 Dashboard
               </NavLink>
-              <NavLink to="/student/join-class" className={linkClass}>
+              <NavLink to="/student/dashboard" className={linkClass}>
                 Join Class
               </NavLink>
             </>

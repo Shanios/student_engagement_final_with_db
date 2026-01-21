@@ -14,7 +14,31 @@ export default function HomePage() {
   const [scrollY, setScrollY] = useState(0);
   const [activeAlert, setActiveAlert] = useState(0);
   const [tileHover, setTileHover] = useState(null);
+ const [userRole, setUserRole] = useState(null);
 
+useEffect(() => {
+  try {
+    // Option 1: From localStorage
+    const storedRole = localStorage.getItem("userRole");
+    if (storedRole) {
+      setUserRole(storedRole);
+      return;
+    }
+
+    // Option 2: From API
+    const token = localStorage.getItem("token");
+    if (token) {
+      fetch("http://127.0.0.1:8000/api/auth/me", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => setUserRole(data.role))
+        .catch(err => console.warn("Could not fetch user role:", err));
+    }
+  } catch (err) {
+    console.warn("Error getting user role:", err);
+  }
+}, []);
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
     window.addEventListener("scroll", handleScroll);
@@ -39,8 +63,16 @@ export default function HomePage() {
     { id: "notes", label: "NOTES", emoji: "📒", color: "tile-red", onClick: () => navigate("/notes") },
     { id: "syllabus", label: "SYLLABUS", emoji: "🎓", color: "tile-pink", onClick: () => window.open("https://byjus.com/rrb-exams/rrb-syllabus/", "_blank") },
     { id: "papers", label: "EXAM PAPERS", emoji: "📄", color: "tile-purple", onClick: () => navigate("/qpapers") },
-    { id: "upload", label: "UPLOAD NOTES", emoji: "☁️", color: "tile-amber", onClick: () => navigate("/notes") }
-  ];
+    ...(userRole === "teacher"
+    ? [{
+        id: "upload",
+        label: "UPLOAD NOTES",
+        emoji: "☁️",
+        color: "tile-amber",
+        onClick: () => navigate("/notes")
+      }]
+    : [])
+];
 
   return (
     <div className="home-root">
@@ -182,7 +214,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {engageOn && (
+      {engageOn  && (
         <EngagementCapture 
           userId={1}
           sampleFps={2}

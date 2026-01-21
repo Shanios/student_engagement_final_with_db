@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException,BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from datetime import datetime
+from datetime import datetime,timezone
 import csv
 from io import StringIO
 import smtplib
@@ -74,7 +74,8 @@ def send_attendance_email(teacher_email: str, session_title: str, attendance_dat
                 <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
                     <h2 style="color: #0f172a;">📊 Attendance Report</h2>
                     <p><strong>Session:</strong> {session_title}</p>
-                    <p><strong>Date:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+                    <p><strong>Date:</strong> {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+}</p>
                     <p><strong>Total Attendees:</strong> {len(attendance_data)}</p>
                     
                     <h3 style="color: #3b82f6;">Attendance Details</h3>
@@ -178,7 +179,7 @@ def mark_join(
         attendance = Attendance(
             session_id=session_id,
             student_id=current_user.id,
-            joined_at=datetime.utcnow()
+            joined_at=datetime.now(timezone.utc)
         )
         db.add(attendance)
         db.commit()
@@ -197,7 +198,7 @@ def mark_join(
     elif attendance.left_at is not None:
         # ✅ Rejoin: Mark as present again
         attendance.left_at = None
-        attendance.joined_at = datetime.utcnow()  # Reset join time
+        attendance.joined_at = datetime.now(timezone.utc)  # Reset join time
         db.commit()
         db.refresh(attendance)
         
@@ -256,7 +257,7 @@ def mark_leave(
 
     # 2️⃣ Only update if student is currently present
     if attendance.left_at is None:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         # ✅ CALCULATE DURATION
         session_seconds = int((now - attendance.joined_at).total_seconds())
@@ -305,7 +306,7 @@ def get_attendance_count(
         raise HTTPException(404, "Session not found")
 
     # 2️⃣ Calculate session duration (seconds)
-    end_time = session.ended_at or datetime.utcnow()
+    end_time = session.ended_at or datetime.now(timezone.utc)
     session_duration = (end_time - session.started_at).total_seconds()
 
     if session_duration <= 0:
@@ -332,7 +333,7 @@ def get_attendance_count(
             duration = (a.left_at - a.joined_at).total_seconds()
         else:
             # Case 2: Student still present
-            duration = (datetime.utcnow() - a.joined_at).total_seconds()
+            duration = (datetime.now(timezone.utc) - a.joined_at).total_seconds()
             currently_present += 1
 
         # 4️⃣ Apply 15% rule
@@ -494,7 +495,14 @@ def download_attendance(
 
     for attendance, user in records:
         end_time = attendance.left_at or session.ended_at
-        duration_sec = (end_time - attendance.joined_at).total_seconds()
+        duration_sec = attendance.total_duration_seconds
+
+# ✅ add final active segment if student never left
+        if attendance.left_at is None:
+         duration_sec += int(
+          (session.ended_at - attendance.joined_at).total_seconds()
+    )
+
         duration_min = round(duration_sec / 60, 2)
 
         attendance_percentage = (duration_sec / session_duration_sec) * 100
@@ -526,6 +534,7 @@ def download_attendance(
 @router.post("/session/{session_id}/send-email")
 def send_attendance_email_endpoint(
     session_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -573,7 +582,14 @@ def send_attendance_email_endpoint(
         # Use left_at OR session end time
         end_time = attendance.left_at or session.ended_at
 
-        duration_sec = (end_time - attendance.joined_at).total_seconds()
+        duration_sec = attendance.total_duration_seconds
+
+# ✅ add final active segment if student never left
+        if attendance.left_at is None:
+          duration_sec += int(
+            (session.ended_at - attendance.joined_at).total_seconds()
+    )
+
         duration_min = round(duration_sec / 60, 2)
 
         attendance_percentage = (duration_sec / session_duration_sec) * 100
@@ -589,13 +605,13 @@ def send_attendance_email_endpoint(
             "status": status,
         })
 
-    # ✅ STEP 5: Send email
-    send_attendance_email(
-        current_user.email,
-        session.title,
-        attendance_data
-    )
 
+    background_tasks.add_task(
+    send_attendance_email,
+    current_user.email,
+    session.title,
+    attendance_data
+)
     return {
         "status": "success",
         "message": f"Attendance report sent to {current_user.email}",

@@ -36,7 +36,7 @@ export default function TeacherDashboard() {
 
     const interval = setInterval(() => {
       if (sessionInfo?.started_at) {
-        const startTime = new Date(sessionInfo.started_at).getTime();
+        const startTime = new Date(sessionInfo.started_at ).getTime();
         const now = new Date().getTime();
         const elapsed = Math.floor((now - startTime) / 1000);
 
@@ -514,15 +514,10 @@ export default function TeacherDashboard() {
           </div>
 
           {/* Real-time Graph */}
-          <RealTimeEngagement
-            sessionId={sessionId}
-            paused={ended}
-            onPointsUpdate={setPoints}
-            mode="live"
-          />
-
+          
+         
           {/* Analytics */}
-          <SessionAnalytics points={points} sessionId={sessionId} />
+          {/* <SessionAnalytics points={points} sessionId={sessionId} /> */}
         </div>
       )}
 

@@ -11,12 +11,217 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
   const containerRef = useRef(null);
   const zpRef = useRef(null);
   const navigate = useNavigate();
-
+  const joinedRef = useRef(false);
+  const mlRetryRef = useRef(0);
+  const MAX_RETRIES = 3;
+  
+  // State management
   const [muteStudents, setMuteStudents] = useState(false);
   const [disableCameras, setDisableCameras] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
   const [ending, setEnding] = useState(false);
   const [MLActive, setMLActive] = useState(false);
+  const mlStartedRef = useRef(false);
+  const [mlStatus, setMlStatus] = useState("idle");
+
+  // Recording states
+  const mediaRecorderRef = useRef(null);
+  const recordedChunksRef = useRef([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const recordingStartTimeRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const micStreamRef = useRef(null);
+  const tabStreamRef = useRef(null);
+
+  /* =======================
+     🎥 START TAB RECORDING WITH MICROPHONE
+     ======================= */
+  const startRecording = async () => {
+    try {
+      // Only teacher records
+      if (userRole !== "host") return;
+
+      console.log("🎥 Starting tab recording with microphone...");
+
+      // 1️⃣ Get tab stream (video + tab audio)
+      const tabStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          mediaSource: "tab",
+          cursor: "always",
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+      });
+
+      tabStreamRef.current = tabStream;
+
+      // 2️⃣ Get microphone stream (teacher's voice)
+      let micStream = null;
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+          video: false,
+        });
+        micStreamRef.current = micStream;
+      } catch (err) {
+        console.warn("⚠️ Microphone access denied, recording without mic", err);
+      }
+
+      // 3️⃣ Mix audio streams using Web Audio API
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      audioContextRef.current = audioContext;
+
+      const audioDestination = audioContext.createMediaStreamDestination();
+
+      // Add tab audio (screen share audio)
+      const tabAudioTrack = tabStream.getAudioTracks()[0];
+      if (tabAudioTrack) {
+        const tabAudioSource = audioContext.createMediaStreamSource(
+          new MediaStream([tabAudioTrack])
+        );
+        tabAudioSource.connect(audioDestination);
+      }
+
+      // Add microphone audio (teacher's voice)
+      if (micStream) {
+        const micAudioSource = audioContext.createMediaStreamSource(micStream);
+        const gainNode = audioContext.createGain();
+        gainNode.gain.value = 0.8;
+        micAudioSource.connect(gainNode);
+        gainNode.connect(audioDestination);
+      }
+
+      // 4️⃣ Create final stream with video + mixed audio
+      const finalStream = new MediaStream();
+
+      // Add video track from tab
+      const videoTrack = tabStream.getVideoTracks()[0];
+      if (videoTrack) {
+        finalStream.addTrack(videoTrack);
+      }
+
+      // Add mixed audio track
+      const mixedAudioTrack = audioDestination.stream.getAudioTracks()[0];
+      if (mixedAudioTrack) {
+        finalStream.addTrack(mixedAudioTrack);
+      }
+
+      // 5️⃣ Create MediaRecorder with final stream
+      const mimeType = "video/webm;codecs=vp8,opus";
+      const mediaRecorder = new MediaRecorder(finalStream, { mimeType });
+
+      mediaRecorderRef.current = mediaRecorder;
+      recordedChunksRef.current = [];
+      recordingStartTimeRef.current = new Date();
+
+      // Collect video data chunks
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      // Handle recording stop
+      mediaRecorder.onstop = () => {
+        console.log("📹 Recording stopped, processing...");
+        downloadRecording();
+        cleanupRecording();
+      };
+
+      // Handle stream stop
+      videoTrack?.addEventListener("ended", () => {
+        console.log("🎥 User stopped tab capture");
+        if (mediaRecorderRef.current?.state === "recording") {
+          mediaRecorderRef.current.stop();
+        }
+      });
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      console.log("✅ Tab recording with microphone started");
+    } catch (err) {
+      console.error("❌ Recording error:", err);
+    }
+  };
+
+  /* =======================
+     🧹 CLEANUP RECORDING RESOURCES
+     ======================= */
+  const cleanupRecording = () => {
+    console.log("🧹 Cleaning up recording resources...");
+
+    // Stop microphone stream
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach((track) => track.stop());
+      micStreamRef.current = null;
+    }
+
+    // Stop tab stream
+    if (tabStreamRef.current) {
+      tabStreamRef.current.getTracks().forEach((track) => track.stop());
+      tabStreamRef.current = null;
+    }
+
+    // Close audio context
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+  };
+
+  /* =======================
+     🎥 STOP RECORDING
+     ======================= */
+  const stopRecording = () => {
+    if (!mediaRecorderRef.current || mediaRecorderRef.current.state === "inactive") {
+      console.warn("⚠️ Recording not active");
+      return;
+    }
+
+    console.log("⏹️ Stopping recording...");
+    mediaRecorderRef.current.stop();
+    setIsRecording(false);
+  };
+
+  /* =======================
+     💾 DOWNLOAD RECORDING
+     ======================= */
+  const downloadRecording = () => {
+    if (recordedChunksRef.current.length === 0) {
+      console.warn("⚠️ No recording data");
+      return;
+    }
+
+    try {
+      const blob = new Blob(recordedChunksRef.current, { type: "video/webm" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
+      a.download = `session_${roomId}_recording_${timestamp}.webm`;
+
+      document.body.appendChild(a);
+      a.click();
+
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 100);
+
+      console.log("✅ Recording downloaded:", a.download);
+      recordedChunksRef.current = [];
+    } catch (err) {
+      console.error("❌ Download error:", err);
+    }
+  };
 
   /* =======================
      TEACHER TOGGLES
@@ -48,6 +253,58 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
   };
 
   /* =======================
+     ML START WITH RETRY
+     ======================= */
+  const startMLSafely = async () => {
+    if (mlStartedRef.current) return;
+    mlStartedRef.current = true;
+
+    setMlStatus("starting");
+
+    const token = localStorage.getItem("token");
+    const headers = { headers: { Authorization: `Bearer ${token}` } };
+
+    try {
+      // Ensure attendance
+      await axios.post(
+        `${API}/api/attendance/join/${roomId}`,
+        {},
+        headers
+      );
+
+      // Wait for DB commit
+      await new Promise(r => setTimeout(r, 1000));
+
+      // Start ML
+      await axios.post(
+        `${API}/api/engagement/start-ml?session_id=${roomId}`,
+        {},
+        headers
+      );
+
+      console.log("✅ ML started");
+      setMlStatus("active");
+      setMLActive(true);
+      mlRetryRef.current = 0;
+
+    } catch (err) {
+      console.warn("⚠️ ML start failed", err);
+
+      if (mlRetryRef.current >= MAX_RETRIES) {
+        console.error("❌ ML failed permanently");
+        setMlStatus("failed");
+        setMLActive(false);
+        return;
+      }
+
+      mlRetryRef.current += 1;
+      mlStartedRef.current = false;
+
+      setTimeout(startMLSafely, 2000);
+    }
+  };
+
+  /* =======================
      END SESSION HANDLER
      ======================= */
   const handleEndSession = async () => {
@@ -57,6 +314,13 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
     }
 
     setEnding(true);
+
+    // Stop recording before ending
+    if (isRecording) {
+      console.log("🎥 Stopping recording before session end...");
+      stopRecording();
+      await new Promise(r => setTimeout(r, 500));
+    }
 
     try {
       const token = localStorage.getItem("token");
@@ -94,73 +358,43 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
   };
 
   /* =======================
-     ✅ NEW: HEARTBEAT (Keep Session Alive)
+     ✅ HEARTBEAT
      ======================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token || !roomId) return;
 
-    // Send heartbeat every 5 seconds to keep session alive
     const interval = setInterval(() => {
       axios.post(
         `${API}/api/engagement/sessions/${roomId}/heartbeat`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       )
-      .then(() => {
-        console.log("💓 Heartbeat sent");
-      })
-      .catch(err => {
-        console.warn("⚠️ Heartbeat error:", err.message);
-      });
+        .then(() => {
+          console.log("💓 Heartbeat sent");
+        })
+        .catch(err => {
+          console.warn("⚠️ Heartbeat error:", err.message);
+        });
     }, 5000);
 
     return () => clearInterval(interval);
   }, [roomId]);
 
   /* =======================
-     STUDENT ATTENDANCE + ML START
-     ======================= */
-  useEffect(() => {
-    if (userRole !== "audience") return;
-
-    const token = localStorage.getItem("token");
-    
-    // Record attendance
-    axios.post(
-      `${API}/api/attendance/join/${roomId}`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } }
-    ).catch(err => console.warn("Attendance error:", err.message));
-
-    console.log("🚀 Starting ML for session:", roomId);
-
-    // Start ML process
-    axios.post(
-      `${API}/api/engagement/start-ml?session_id=${roomId}`,
-      {},
-      { 
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 15000 
-      }
-    )
-    .then(res => {
-      console.log("✅ ML started:", res.data);
-      setMLActive(true);
-    })
-    .catch(err => {
-      console.warn("⚠️ ML start failed:", err.message);
-      setMLActive(false);
-    });
-  }, [roomId, userRole]);
-
-  /* =======================
      ML STOP ON UNMOUNT
      ======================= */
   useEffect(() => {
     return () => {
-      console.log("🧹 VideoRoom unmounting, stopping ML");
-      
+      console.log("🧹 VideoRoom unmounting");
+
+      // Stop recording if active
+      if (isRecording) {
+        stopRecording();
+        cleanupRecording();
+      }
+
+      // Stop ML for students
       if (userRole === "audience") {
         const token = localStorage.getItem("token");
         axios.post(
@@ -170,24 +404,10 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
         ).catch(err => console.warn("ML cleanup error:", err.message));
       }
     };
-  }, [roomId, userRole]);
+  }, [roomId, userRole, isRecording]);
 
   /* =======================
-     ML STOP WHEN SESSION ENDS
-     ======================= */
-  useEffect(() => {
-    if (sessionEnded && userRole === "audience") {
-      const token = localStorage.getItem("token");
-      axios.post(
-        `${API}/api/engagement/stop-ml?session_id=${roomId}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      ).catch(err => console.warn("ML stop error:", err.message));
-    }
-  }, [sessionEnded, userRole, roomId]);
-
-  /* =======================
-     STUDENT ENFORCEMENT (Mute/Camera Control)
+     STUDENT ENFORCEMENT
      ======================= */
   useEffect(() => {
     if (userRole !== "audience" || !zpRef.current) return;
@@ -261,6 +481,13 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
 
         if (res.data.ended_at) {
           console.log("🎯 Session ended by teacher");
+
+          // Stop recording if still active
+          if (isRecording && userRole === "host") {
+            stopRecording();
+            cleanupRecording();
+          }
+
           setSessionEnded(true);
 
           if (userRole === "host") {
@@ -279,7 +506,7 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [roomId, userRole, sessionEnded, navigate]);
+  }, [roomId, userRole, sessionEnded, navigate, isRecording]);
 
   /* =======================
      VIDEO INITIALIZATION
@@ -307,39 +534,38 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
       turnOnCameraWhenJoining: isTeacher,
       turnOnMicrophoneWhenJoining: isTeacher,
 
-      // ✅ FIXED: 
-      // - Teachers: Can toggle everything
-      // - Students: Can toggle camera and microphone
-      // - Only teacher can share screen
-      showMyCameraToggleButton: true,              // Both teacher & student
-      showMyMicrophoneToggleButton: true,          // Both teacher & student
-      showScreenSharingButton: isTeacher,          // Only teacher
+      showMyCameraToggleButton: true,
+      showMyMicrophoneToggleButton: true,
+      showScreenSharingButton: isTeacher,
 
       showUserList: false,
       showTextChat: true,
 
       onJoinRoom: () => {
+        joinedRef.current = true;
         console.log("✅ Zego room joined");
-      },
 
-      onLeaveRoom: () => {
-        console.log("🚨 User left video room");
+        // Start recording (Teacher only)
+        if (userRole === "host") {
+          startRecording();
+        }
 
+        // Start ML (Student only)
         if (userRole === "audience") {
-          setMLActive(false);
-          const token = localStorage.getItem("token");
-          axios.post(
-            `${API}/api/engagement/stop-ml?session_id=${roomId}`,
-            {},
-            { headers: { Authorization: `Bearer ${token}` } }
-          ).catch(err => console.warn("Cleanup error:", err.message));
+          startMLSafely();
         }
       },
     });
 
     return () => {
-      zp.destroy();
-      zpRef.current = null;
+      try {
+        if (zpRef.current) {
+          zpRef.current.destroy();
+          zpRef.current = null;
+        }
+      } catch (err) {
+        console.warn("⚠️ Error destroying Zego instance:", err);
+      }
     };
   }, [roomId, userId, userName, userRole]);
 
@@ -393,6 +619,24 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
             </button>
           </div>
 
+          {/* Recording Indicator */}
+          {isRecording && (
+            <div
+              style={{
+                padding: "8px 12px",
+                background: "#dc2626",
+                color: "white",
+                borderRadius: "6px",
+                fontSize: "12px",
+                fontWeight: "700",
+                textAlign: "center",
+                animation: "pulse-red 1.5s infinite",
+              }}
+            >
+              🎥 RECORDING (with audio)
+            </div>
+          )}
+
           <button
             onClick={handleEndSession}
             disabled={ending || sessionEnded}
@@ -411,6 +655,30 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
           >
             {ending ? "⏳ Ending Session..." : "🛑 End Session"}
           </button>
+
+          {/* ML STATUS – FAILED */}
+          {mlStatus === "failed" && (
+            <div style={{
+              position: "absolute",
+              bottom: "20px",
+              right: "20px",
+              zIndex: 9999,
+              background: "rgba(220, 38, 38, 0.95)",
+              color: "white",
+              padding: "10px 14px",
+              borderRadius: "12px",
+              fontSize: "12px",
+              fontWeight: "600",
+              maxWidth: "260px",
+              textAlign: "center",
+              boxShadow: "0 8px 20px rgba(0,0,0,0.25)"
+            }}>
+              ⚠️ AI engagement tracking failed<br />
+              <span style={{ fontSize: "11px", opacity: 0.85 }}>
+                Session will continue without AI analytics
+              </span>
+            </div>
+          )}
 
           {sessionEnded && (
             <div
@@ -431,7 +699,7 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
       )}
 
       {/* ML STATUS BADGE */}
-      {userRole === "audience" && MLActive && (
+      {userRole === "audience" && mlStatus === "active" && (
         <div style={{
           position: "absolute",
           bottom: "20px",
@@ -462,6 +730,10 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
         @keyframes pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.5; }
+        }
+        @keyframes pulse-red {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
         }
       `}</style>
 

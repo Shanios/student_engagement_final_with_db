@@ -258,13 +258,14 @@ export default function SessionList() {
                     <Clock size={16} />
                     <div>
                       <p className="detail-label">Date & Time</p>
-                     <p className="detail-value">
-  {new Date(session.ended_at + "Z").toLocaleDateString()} •
-  {new Date(session.ended_at + "Z").toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit'
-  })}
-</p>
+                      <p className="detail-value">
+                        {session.ended_at
+                          ? `${new Date(session.ended_at).toLocaleDateString()} • ${new Date(session.ended_at).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}`
+                          : "Session in progress..."}
+                      </p>
                     </div>
                   </div>
 
@@ -411,22 +412,22 @@ export default function SessionList() {
                           {p.status === "joined" ? "🟢 Joined" : "⚫ Left"}
                         </span>
                       </td>
-                     <td>
-  {new Date(p.joined_at + "Z").toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit'
-  })}
-</td>
-
                       <td>
-  {p.left_at
-    ? new Date(p.left_at + "Z").toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    : "-"}
-</td>
-
+                        {p.joined_at
+                          ? new Date(p.joined_at).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          : "-"}
+                      </td>
+                      <td>
+                        {p.left_at
+                          ? new Date(p.left_at).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          : "-"}
+                      </td>
                       <td>{p.duration_seconds ? Math.round(p.duration_seconds / 60) : "-"}</td>
                     </tr>
                   ))}

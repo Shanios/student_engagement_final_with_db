@@ -522,3 +522,299 @@ footer {
 .notes-btn.danger {
   background: linear-gradient(135deg, #ff5b6c, #b62335);
 }
+/* Login-responsive.css - RESPONSIVE ENHANCEMENTS */
+
+/* ===== BASE RESPONSIVE STYLES ===== */
+
+/* Container responsiveness */
+.connect-login-page {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+/* Responsive network elements */
+@media (max-width: 768px) {
+  .line {
+    height: 100px !important;
+    opacity: 0.25;
+  }
+  
+  .dot {
+    width: 6px !important;
+    height: 6px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .line {
+    display: none;
+  }
+  
+  .dot {
+    display: none;
+  }
+  
+  .network-bg {
+    opacity: 0.2;
+  }
+}
+
+/* ===== LOGIN CONTAINER RESPONSIVENESS ===== */
+
+.login-container {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* Tablet adjustments */
+@media (max-width: 768px) {
+  .login-container {
+    max-width: 400px;
+    padding: 35px 30px !important;
+    margin: 0 20px;
+  }
+  
+  .title h2 {
+    font-size: 26px !important;
+  }
+  
+  .title p {
+    font-size: 13px !important;
+  }
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .login-container {
+    padding: 30px 24px !important;
+    max-width: 100%;
+    margin: 0 16px;
+    border-radius: 12px;
+  }
+  
+  .title h2 {
+    font-size: 24px !important;
+  }
+  
+  .title p {
+    font-size: 12px !important;
+  }
+  
+  .btn {
+    padding: 14px !important;
+    font-size: 16px !important;
+  }
+}
+
+/* Small mobile adjustments */
+@media (max-width: 320px) {
+  .login-container {
+    padding: 24px 20px !important;
+    margin: 0 12px;
+  }
+  
+  .title h2 {
+    font-size: 22px !important;
+  }
+  
+  .title p {
+    font-size: 11px !important;
+  }
+  
+  .input-box input {
+    padding: 12px !important;
+    font-size: 14px !important;
+  }
+}
+
+/* ===== FORM ELEMENTS RESPONSIVENESS ===== */
+
+.input-box {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input-box input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Password toggle button for mobile */
+.password-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #a8b3c6;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px;
+  z-index: 2;
+  -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+}
+
+/* Improve touch targets for mobile */
+@media (max-width: 768px) {
+  .btn, 
+  .input-box input,
+  .password-toggle-btn {
+    min-height: 44px; /* Minimum touch target size for iOS */
+  }
+  
+  .password-toggle-btn {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* ===== ERROR MESSAGE RESPONSIVENESS ===== */
+
+.login-error {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 13px !important;
+  line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 480px) {
+  .login-error {
+    font-size: 12px !important;
+    padding: 10px !important;
+  }
+}
+
+/* ===== LINKS RESPONSIVENESS ===== */
+
+.extra-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .extra-links {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .extra-links p {
+    text-align: center;
+    font-size: 13px !important;
+  }
+}
+
+/* ===== LANDSCAPE MODE SUPPORT ===== */
+
+@media (max-height: 600px) and (orientation: landscape) {
+  .connect-login-page {
+    align-items: flex-start;
+    padding-top: 40px;
+    padding-bottom: 40px;
+    min-height: auto;
+    height: auto;
+  }
+  
+  .login-container {
+    padding: 24px 30px !important;
+    max-width: 360px;
+  }
+  
+  .title {
+    margin-bottom: 20px !important;
+  }
+  
+  .input-box {
+    margin-bottom: 12px !important;
+  }
+}
+
+/* ===== HIGH DPI SCREENS ===== */
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .login-container {
+    border-width: 0.5px;
+  }
+  
+  .input-box input {
+    border-width: 0.5px;
+  }
+}
+
+/* ===== DARK/LIGHT MODE ADJUSTMENTS ===== */
+
+@media (prefers-color-scheme: light) {
+  .connect-login-page {
+    background: #f8fafc;
+  }
+  
+  .login-container {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+  }
+  
+  .title h2 {
+    color: #1e293b;
+  }
+  
+  .title p {
+    color: #64748b;
+  }
+  
+  .input-box label {
+    color: #334155;
+  }
+  
+  .input-box input {
+    background: rgba(241, 245, 249, 0.9);
+    border-color: #cbd5e1;
+    color: #0f172a;
+  }
+  
+  .input-box input::placeholder {
+    color: #94a3b8;
+  }
+  
+  .extra-links a {
+    color: #3b82f6;
+  }
+}
+
+/* ===== LOADING STATE FOR MOBILE ===== */
+
+@media (max-width: 768px) {
+  .btn:disabled {
+    opacity: 0.6;
+  }
+}
+
+/* ===== SCROLLBAR STYLING FOR MOBILE ANSWERS ===== */
+
+@media (max-width: 768px) {
+  .chatfab-answer-text {
+    max-height: 200px;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  }
+}

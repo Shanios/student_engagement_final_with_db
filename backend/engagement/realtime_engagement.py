@@ -353,6 +353,8 @@ def main():
         sys.exit(1)
 
     try:
+       
+     
         cap = None
         # ✅ Try virtual camera first (OBS), then real camera
         for camera_id in [1, 0]:
@@ -381,6 +383,31 @@ def main():
         print_log(f"❌ [5] Camera error: {e}")
         close_debug_log()
         sys.exit(1)
+    # try:
+    #    CAMERA_ID = 0  # real webcam only
+
+    #    print_log(f"🎥 Opening camera {CAMERA_ID}...")
+    #    cap = cv2.VideoCapture(CAMERA_ID)
+
+    #    if not cap.isOpened():
+    #      print_log("❌ [5] Camera not available or permission denied")
+    #      close_debug_log()
+    #      sys.exit(1)
+
+    #    ok, test_frame = cap.read()
+    #    if not ok:
+    #      print_log("❌ [5] Camera opened but cannot read frames")
+    #      cap.release()
+    #      close_debug_log()
+    #      sys.exit(1)
+
+    #    print_log("🟢 [5] Camera opened successfully")
+
+    # except Exception as e:
+    #   print_log(f"❌ [5] Camera error: {e}")
+    #   close_debug_log()
+    #   sys.exit(1)
+
 
     ear_window = deque(maxlen=WINDOW_SIZE)
     current_prob = 0.0

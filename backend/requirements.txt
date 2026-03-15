@@ -37,6 +37,6 @@ python-dateutil==2.9.0.post0
 # ========== Monitoring & Logging ==========
 sentry-sdk==2.47.0
 numpy==2.2.6
-sentence-transformers==5.1.2
+
 # ========== Optional Utilities ==========
 

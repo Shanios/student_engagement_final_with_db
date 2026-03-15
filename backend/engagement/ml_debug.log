@@ -1,7 +1,77 @@
-🟢 Debug log started at 2026-01-20T17:38:41.746984
+🟢 Debug log started at 2026-03-15T11:09:43.929097
 🟢 [1] main() started
 🟢 [2] model loaded
 🟢 [3] retry thread started
 🟢 [4] CSV log opened
-🎥 Opening camera 0...
-❌ [5] Camera opened but cannot read frames
+🎥 Trying camera 1...
+✅ Successfully using camera 1
+🟢 [6] Signal handlers registered
+🟢 [7] Face mesh initialized
+🟢 [8] Starting frame loop
+🎯 UPLOAD TRIGGERED | Status: NOT ENGAGED | Prob: 0.050
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/75/points | Score: 0.050, EAR: 0.380
+🧠 Inference: EAR samples=3, Prob=0.780, Status=ENGAGED
+🎯 UPLOAD TRIGGERED | Status: ENGAGED | Prob: 0.780
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/75/points | Score: 0.780, EAR: 0.374
+🧠 Inference: EAR samples=4, Prob=0.565, Status=ENGAGED
+🎯 UPLOAD TRIGGERED | Status: ENGAGED | Prob: 0.565
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/75/points | Score: 0.565, EAR: 0.388
+🧠 Inference: EAR samples=5, Prob=0.565, Status=ENGAGED
+🧠 Inference: EAR samples=6, Prob=0.565, Status=ENGAGED
+🧠 Inference: EAR samples=7, Prob=0.565, Status=ENGAGED
+🧠 Inference: EAR samples=8, Prob=0.565, Status=ENGAGED
+🧠 Inference: EAR samples=9, Prob=0.565, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.565, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.565, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.565, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.565, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.565, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.565, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.565, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.565, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.565, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.565, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.565, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.565, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.585, Status=ENGAGED
+🎯 UPLOAD TRIGGERED | Status: ENGAGED | Prob: 0.585
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/75/points | Score: 0.585, EAR: 0.396
+🧠 Inference: EAR samples=10, Prob=0.585, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.585, Status=ENGAGED
+🧠 Inference: EAR samples=10, Prob=0.585, Status=ENGAGED
+❌ Upload failed: Status 500
+❌ Upload failed: Status 500
+📦 Point buffered (queue size: 1)
+📦 Point buffered (queue size: 2)
+❌ Upload failed: Status 500
+📦 Point buffered (queue size: 3)
+❌ Upload failed: Status 500
+📦 Point buffered (queue size: 4)
+🔄 Retrying buffered point
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/75/points | Score: 0.565, EAR: 0.388
+❌ Upload failed: Status 500
+🔄 Retry #1
+🔄 Retrying buffered point
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/75/points | Score: 0.565, EAR: 0.388
+❌ Upload failed: Status 500
+🔄 Retry #2
+🔄 Retrying buffered point
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/75/points | Score: 0.565, EAR: 0.388
+❌ Upload failed: Status 500
+🔄 Retry #3
+🔄 Retrying buffered point
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/75/points | Score: 0.565, EAR: 0.388
+❌ Upload failed: Status 500
+🔄 Retry #4
+🔄 Retrying buffered point
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/75/points | Score: 0.565, EAR: 0.388
+❌ Upload failed: Status 500
+🔄 Retry #5
+❌ Dropped point after 5 retries
+🔄 Retrying buffered point
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/75/points | Score: 0.050, EAR: 0.380
+❌ Upload failed: Status 500
+🔄 Retry #1
+🔄 Retrying buffered point
+📤 POST http://127.0.0.1:8000/api/engagement/sessions/75/points | Score: 0.050, EAR: 0.380
+🛑 Session ended (403). Stopping uploads and clearing buffer.

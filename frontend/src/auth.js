@@ -1,8 +1,6 @@
 // src/auth.js
 // ✅ Central authentication utility - single source of truth for all auth operations
 
-const API_BASE = "http://127.0.0.1:8000";
-
 // ==================== TOKEN STORAGE ====================
 
 export function getAuthToken() {
@@ -71,6 +69,7 @@ function addRefreshSubscriber(callback) {
 // ✅ NEW: Silent token refresh
 export async function refreshAccessToken() {
   const refreshToken = getRefreshToken();
+  const API_BASE = import.meta.env.VITE_API_BASE;
   
   if (!refreshToken) {
     clearAuth();
@@ -117,6 +116,7 @@ export async function refreshAccessToken() {
 // ✅ NEW: Logout with backend invalidation
 export async function logout() {
   const token = getAuthToken();
+  const API_BASE = import.meta.env.VITE_API_BASE;
   
   if (token) {
     try {

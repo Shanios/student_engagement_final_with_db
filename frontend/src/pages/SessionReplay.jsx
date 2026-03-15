@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import API from "../api/api";
 import RealTimeEngagement from "./RealTimeEngagement";
 import SessionAnalytics from "../components/SessionAnalytics";
 import "../styles/global.css";
@@ -25,15 +25,13 @@ export default function SessionReplay() {
       const token = localStorage.getItem("token");
       
       // Fetch session info
-      const sessionRes = await axios.get(
-        `http://127.0.0.1:8000/api/engagement/sessions/${sessionId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const sessionRes = await API.get(
+        `/api/engagement/sessions/${sessionId}`
       );
       
       // Fetch all points (static data)
-      const pointsRes = await axios.get(
-        `http://127.0.0.1:8000/api/engagement/sessions/${sessionId}/series`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const pointsRes = await API.get(
+        `/api/engagement/sessions/${sessionId}/series`
       );
 
       setSession(sessionRes.data);

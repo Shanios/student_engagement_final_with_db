@@ -2,12 +2,12 @@
 import { useNavigate } from "react-router-dom";
 import "./HomePage.css";
 import MainHeader from "../components/MainHeader";
-import PosterCarousel from "../components/PosterCarousel"
+
 import EngagementCapture from "../components/EngagementCapture";
 import { useState, useEffect } from "react";
 import Footer from "../components/Footer";
 import "../styles/global.css";
-
+import API from "../api/api";
 export default function HomePage() {
   const navigate = useNavigate();
   const [engageOn, setEngageOn] = useState(false);
@@ -28,11 +28,8 @@ useEffect(() => {
     // Option 2: From API
     const token = localStorage.getItem("token");
     if (token) {
-      fetch("http://127.0.0.1:8000/api/auth/me", {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-        .then(res => res.json())
-        .then(data => setUserRole(data.role))
+      API.get("/api/auth/me")
+        .then(res => setUserRole(res.data.role))
         .catch(err => console.warn("Could not fetch user role:", err));
     }
   } catch (err) {

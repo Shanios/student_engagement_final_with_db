@@ -1,9 +1,8 @@
 // src/pages/QuestionPapersPage.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import API from "../api/api";
 import "./QuestionPapers.css";
-const API_BASE = "http://127.0.0.1:8000";
 
 // Same helper we used earlier in notes/login
 function parseJwt(token) {
@@ -63,8 +62,7 @@ export default function QuestionPapersPage() {
     }
 
     loadPapers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [navigate]);
 
   async function loadPapers(params = {}) {
     setLoading(true);
@@ -76,10 +74,7 @@ export default function QuestionPapersPage() {
         return;
       }
 
-      const res = await axios.get(`${API_BASE}/api/qpapers/`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const res = await API.get("/api/qpapers/", {
         params: {
           subject: params.subject ?? (filterSubject || undefined),
           year: params.year ?? (filterYear || undefined),
@@ -120,9 +115,9 @@ export default function QuestionPapersPage() {
       if (year) formData.append("year", year);
       formData.append("file", file);
 
-      await axios.post(`${API_BASE}/api/qpapers/upload`, formData, {
+      await API.post("/api/qpapers/upload", formData, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
         },
       });
 
@@ -152,10 +147,7 @@ export default function QuestionPapersPage() {
         return;
       }
 
-      const res = await axios.get(`${API_BASE}/api/qpapers/${id}/download`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const res = await API.get(`/api/qpapers/${id}/download`, {
         responseType: "blob",
       });
 

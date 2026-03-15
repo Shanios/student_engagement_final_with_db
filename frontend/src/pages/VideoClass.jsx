@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import VideoRoom from "../components/VideoRoom";
-import axios from "axios";
+import API from "../api/api";
 
 export default function VideoClass() {
   const { sessionId } = useParams();
@@ -23,13 +23,8 @@ export default function VideoClass() {
         console.log("📡 Fetching session details for:", sessionId);
 
         // ✅ CRITICAL: Fetch full session data with role
-        const res = await axios.get(
-          `http://127.0.0.1:8000/api/engagement/sessions/${sessionId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+        const res = await API.get(
+          `/api/engagement/sessions/${sessionId}`
         );
 
         console.log("✅ Full session data:", res.data);

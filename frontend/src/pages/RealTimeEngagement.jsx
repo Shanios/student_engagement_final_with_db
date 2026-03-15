@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import axios from "axios";
+import API from "../api/api";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -52,13 +52,11 @@ export default function RealTimeEngagement({
       const token = localStorage.getItem("token");
       if (!token) return [];
 
-      const url = sinceIso
-        ? `http://127.0.0.1:8000/api/engagement/sessions/${sessionId}/series/updates?since=${encodeURIComponent(sinceIso)}`
-        : `http://127.0.0.1:8000/api/engagement/sessions/${sessionId}/series`;
+      const endpoint = sinceIso
+        ? `/api/engagement/sessions/${sessionId}/series/updates?since=${encodeURIComponent(sinceIso)}`
+        : `/api/engagement/sessions/${sessionId}/series`;
 
-      const res = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await API.get(endpoint);
 
       return res.data || [];
     } catch (err) {
@@ -101,7 +99,7 @@ export default function RealTimeEngagement({
     setUpdateCount(prev => prev + 1);
   }
 
- useEffect(() => {
+  useEffect(() => {
     // ✅ NEW: Don't poll in replay mode
     if (paused || mode === "replay") {
       console.log("⏸️ Polling disabled (paused=" + paused + ", mode=" + mode + ")");
@@ -191,7 +189,7 @@ export default function RealTimeEngagement({
 
   return (
     <div className="chart-container">
-    <div className="chart-title">
+      <div className="chart-title">
         Real-time Engagement
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           {loading && mode === "live" && <span className="spinner"></span>}

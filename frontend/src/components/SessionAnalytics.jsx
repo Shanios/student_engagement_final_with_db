@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import axios from "axios";
+import API from "../api/api";
 
 export default function SessionAnalytics({ points = [], sessionId }) {
   const [advancedAnalytics, setAdvancedAnalytics] = useState(null);
@@ -56,21 +57,17 @@ export default function SessionAnalytics({ points = [], sessionId }) {
   console.log("First point:", points[0]);
   console.log("Last point:", points[points.length - 1]);
     setLoading(true);
-    const token = localStorage.getItem("token");
-
-    axios
-      .get(`http://127.0.0.1:8000/api/engagement/sessions/${sessionId}/advanced-analytics`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => {
-        setAdvancedAnalytics(res.data);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch advanced analytics:", err);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+API
+  .get(`/api/engagement/sessions/${sessionId}/advanced-analytics`)
+  .then((res) => {
+    setAdvancedAnalytics(res.data);
+  })
+  .catch((err) => {
+    console.error("Failed to fetch advanced analytics:", err);
+  })
+  .finally(() => {
+    setLoading(false);
+  });
   }, [sessionId]);
 
   // Format time

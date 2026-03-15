@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import API from "../api/api";
 import { Download, Mail, Trash2, Eye, Clock, Users, TrendingUp, AlertCircle, CheckCircle, Loader } from "lucide-react";
 import "./SessionList.css";
 import "../styles/global.css";
@@ -28,9 +28,8 @@ export default function SessionList() {
           return;
         }
 
-        const res = await axios.get(
-          "http://127.0.0.1:8000/api/engagement/sessions/teacher/all",
-          { headers: { Authorization: `Bearer ${token}` } }
+        const res = await API.get(
+          "/api/engagement/sessions/teacher/all"
         );
 
         console.log("✅ Sessions loaded:", res.data);
@@ -50,9 +49,8 @@ export default function SessionList() {
   const handleViewAttendance = async (sessionId) => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(
-        `http://127.0.0.1:8000/api/attendance/session/${sessionId}/participants`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const res = await API.get(
+        `/api/attendance/session/${sessionId}/participants`
       );
 
       console.log("👥 Participants:", res.data);
@@ -70,10 +68,9 @@ export default function SessionList() {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `http://127.0.0.1:8000/api/attendance/session/${sessionId}/download`,
+      const response = await API.get(
+        `/api/attendance/session/${sessionId}/download`,
         {
-          headers: { Authorization: `Bearer ${token}` },
           responseType: "blob",
         }
       );
@@ -107,10 +104,9 @@ export default function SessionList() {
     try {
       const token = localStorage.getItem("token");
       
-      const res = await axios.post(
-        `http://127.0.0.1:8000/api/attendance/session/${sessionId}/send-email`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
+      const res = await API.post(
+        `/api/attendance/session/${sessionId}/send-email`,
+        {}
       );
 
       console.log("✅ Email sent:", res.data);
@@ -142,9 +138,8 @@ export default function SessionList() {
     try {
       const token = localStorage.getItem("token");
 
-      await axios.delete(
-        `http://127.0.0.1:8000/api/engagement/sessions/${sessionId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      await API.delete(
+        `/api/engagement/sessions/${sessionId}`
       );
 
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));

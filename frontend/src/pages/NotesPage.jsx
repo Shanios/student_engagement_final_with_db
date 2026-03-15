@@ -1,10 +1,8 @@
 // src/pages/NotesPage.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import API from "../api/api";
 import "./NotesPage.css";
-
-const API_BASE = "http://127.0.0.1:8000";
 
 // Same helper as other pages
 function parseJwt(token) {
@@ -58,7 +56,7 @@ export default function NotesPage() {
     if (payload.role) setRole(payload.role);
 
     loadNotes();
-  }, []);
+  }, [navigate]);
 
   async function loadNotes(subjectParam) {
     setLoading(true);
@@ -70,10 +68,7 @@ export default function NotesPage() {
         return;
       }
 
-      const res = await axios.get(`${API_BASE}/api/notes/`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const res = await API.get("/api/notes/", {
         params: {
           subject: subjectParam ?? (filterSubject || undefined),
         },
@@ -110,9 +105,9 @@ export default function NotesPage() {
       formData.append("subject", subject);
       formData.append("file", file);
 
-      await axios.post(`${API_BASE}/api/notes/upload`, formData, {
+      await API.post("/api/notes/upload", formData, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
         },
       });
 
@@ -139,10 +134,7 @@ export default function NotesPage() {
         return;
       }
 
-      const res = await axios.get(`${API_BASE}/api/notes/${id}/download`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const res = await API.get(`/api/notes/${id}/download`, {
         responseType: "blob",
       });
 

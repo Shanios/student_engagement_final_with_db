@@ -3,25 +3,106 @@ import re
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-from .lm_summarizer import LMSummarizer   # note the dot
+from pathlib import Path
+from dotenv import load_dotenv
+import requests
 
-BASE_DIR = os.path.dirname(__file__)      # folder: backend/rag
-EMB_PATH = os.path.join(BASE_DIR, "embeddings.npy")
-CHUNK_PATH = os.path.join(BASE_DIR, "text_chunks.npy")
+load_dotenv()
 
-# Load RAG data
-embeddings = np.load(EMB_PATH)
-text_chunks = np.load(CHUNK_PATH, allow_pickle=True)
+# ========== SUPABASE CONFIGURATION ==========
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+RAG_EMBEDDINGS_URL = os.getenv("RAG_EMBEDDINGS_URL")
+RAG_CHUNKS_URL = os.getenv("RAG_CHUNKS_URL")
 
-# Encoder for similarity search
-encoder = SentenceTransformer("all-MiniLM-L6-v2")
+# Local cache directory for downloaded files
+import tempfile
+CACHE_DIR = Path(tempfile.gettempdir()) / "rag_cache"
+CACHE_DIR.mkdir(exist_ok=True)
 
-# Local LM Studio client
-llm = LMSummarizer()
+EMB_PATH = CACHE_DIR / "embeddings.npy"
+CHUNK_PATH = CACHE_DIR / "text_chunks.npy"
+
+# ✅ LAZY LOADING - Don't load at import time
+embeddings = None
+text_chunks = None
+encoder = None
+llm = None
+
+
+def download_file(url: str, output_path: Path) -> bool:
+    """Download file from Supabase Storage"""
+    try:
+        print(f"📥 Downloading {output_path.name} from Supabase...")
+        response = requests.get(url, timeout=60)
+        response.raise_for_status()
+        
+        with open(output_path, 'wb') as f:
+            f.write(response.content)
+        
+        print(f"✅ Downloaded {output_path.name} ({len(response.content) / 1024 / 1024:.1f} MB)")
+        return True
+    
+    except requests.exceptions.Timeout:
+        print(f"⏱️  Download timeout for {output_path.name}")
+        return False
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Download failed: {e}")
+        return False
+    except Exception as e:
+        print(f"❌ Error downloading: {e}")
+        return False
+
+
+def _load_rag_data():
+    """Load RAG data lazily on first use"""
+    global embeddings, text_chunks, encoder, llm
+    
+    if embeddings is not None:
+        return  # Already loaded
+    
+    print("🚀 Loading RAG data...")
+    
+    try:
+        # ========== DOWNLOAD FROM SUPABASE IF NOT CACHED ==========
+        if not EMB_PATH.exists():
+            if not RAG_EMBEDDINGS_URL:
+                raise RuntimeError("RAG_EMBEDDINGS_URL not set in environment")
+            if not download_file(RAG_EMBEDDINGS_URL, EMB_PATH):
+                raise RuntimeError("Failed to download embeddings.npy from Supabase")
+        
+        if not CHUNK_PATH.exists():
+            if not RAG_CHUNKS_URL:
+                raise RuntimeError("RAG_CHUNKS_URL not set in environment")
+            if not download_file(RAG_CHUNKS_URL, CHUNK_PATH):
+                raise RuntimeError("Failed to download text_chunks.npy from Supabase")
+        
+        # ========== LOAD FROM CACHE ==========
+        print("📂 Loading from cache...")
+        embeddings = np.load(EMB_PATH)
+        text_chunks = np.load(CHUNK_PATH, allow_pickle=True)
+        
+        print(f"✅ Embeddings shape: {embeddings.shape}")
+        print(f"✅ Text chunks count: {len(text_chunks)}")
+        
+        print("🤖 Loading SentenceTransformer...")
+        encoder = SentenceTransformer("all-MiniLM-L6-v2")
+        
+        print("📝 Loading LM Summarizer...")
+        from .lm_summarizer import LMSummarizer
+        llm = LMSummarizer()
+        
+        print("✅ RAG fully loaded!")
+        
+    except Exception as e:
+        print(f"❌ RAG initialization failed: {e}")
+        raise
 
 
 def retrieve_context(query: str, top_k: int = 5, max_chars: int = 3500) -> str:
     """Return a shortened context string that fits model's context window."""
+    _load_rag_data()  # ✅ Load only when needed
+    
     q_emb = encoder.encode([query])
     sims = cosine_similarity(q_emb, embeddings)[0]
     top_idx = sims.argsort()[-top_k:][::-1]
@@ -29,7 +110,6 @@ def retrieve_context(query: str, top_k: int = 5, max_chars: int = 3500) -> str:
 
     big_context = "\n\n".join(chunks)
 
-    # Hard cap on length to avoid 4096-token overflow
     if len(big_context) > max_chars:
         big_context = big_context[:max_chars]
 
@@ -41,7 +121,6 @@ def parse_style_instructions(question: str) -> str:
     q = question.lower()
     parts = []
 
-    # NEW: detect "N points" pattern
     m_points = re.search(r"(\d+)\s*(short\s*)?points?", q)
     if m_points:
         n = m_points.group(1)
@@ -50,7 +129,6 @@ def parse_style_instructions(question: str) -> str:
             f"do not write any introduction or conclusion, only the {n} points"
         )
 
-    # UPDATED: Better detection for list-type questions
     if "list" in q:
         m_num = re.search(r'list\s+(?:any\s+)?(\d+)', q)
         if m_num:
@@ -81,19 +159,17 @@ def parse_style_instructions(question: str) -> str:
 
     return "; ".join(parts)
 
+
 def choose_max_tokens(question: str) -> int:
     q = question.lower()
     
-    # Check for "list N points/advantages/etc"
     m_list = re.search(r'list\s+(?:any\s+)?(\d+)', q)
     if m_list:
         num = int(m_list.group(1))
         if "framework" in q or "scenarios" in q:
-            return min(2500, num * 250)  # ← Even more for framework questions
-        # If asking for 8+ items with examples/explanations
-        # If asking for 8+ items with examples/explanations, give more tokens
+            return min(2500, num * 250)
         if num >= 8:
-            return min(2000, num * 200)  # ← Increased multiplier
+            return min(2000, num * 200)
         return min(1200, num * 150)
     
     m = re.search(r"(\d+)\s*mark", q)
@@ -101,7 +177,6 @@ def choose_max_tokens(question: str) -> int:
         marks = int(m.group(1))
         return max(200, min(4000, marks * 80))
     
-    # Multi-part questions
     if "each" in q or "each model" in q:
         return 3500
     
@@ -114,25 +189,31 @@ def choose_max_tokens(question: str) -> int:
     if "long" in q or "detail" in q:
         return 2000
     
-    # Multi-factor with decision framework
     if "framework" in q or "scenarios" in q:
-        return 2500  # ← NEW: for complex framework questions
+        return 2500
     
     return 1500
 
 
 def answer_question(question: str) -> str:
-    context = retrieve_context(question)
-    style = parse_style_instructions(question)
-    max_toks = choose_max_tokens(question)
+    """Answer a question using RAG + LM"""
+    try:
+        _load_rag_data()  # ✅ Load on first call
+        
+        context = retrieve_context(question)
+        style = parse_style_instructions(question)
+        max_toks = choose_max_tokens(question)
+        
+        print(f"\n[DEBUG] max_tokens calculated: {max_toks}")
+        print(f"[DEBUG] Context length: {len(context)} chars")
+        print(f"[DEBUG] Style instructions: {style}")
+        print("-" * 60)
+        
+        return llm.summarize(question, context, style, max_tokens=max_toks)
     
-    # DEBUG PRINTS - Add these lines
-    print(f"\n[DEBUG] max_tokens calculated: {max_toks}")
-    print(f"[DEBUG] Context length: {len(context)} chars")
-    print(f"[DEBUG] Style instructions: {style}")
-    print("-" * 60)
-    
-    return llm.summarize(question, context, style, max_tokens=max_toks)
+    except Exception as e:
+        print(f"❌ RAG error: {e}")
+        return f"RAG chatbot unavailable. Error: {str(e)}"
 
 
 if __name__ == "__main__":

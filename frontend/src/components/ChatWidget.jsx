@@ -1,8 +1,8 @@
 // src/components/ChatWidget.jsx
 import { useState } from "react";
-import axios from "axios";
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import API from "../api/api"; // ✅ Import at top
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -10,15 +10,15 @@ export default function ChatWidget() {
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-const location = useLocation();
+  const location = useLocation();
 
-// Auto-close chatbot on page change
-useEffect(() => {
-  setIsOpen(false);
-  setQuestion("");
-  setAnswer("");
-  setError("");
-}, [location.pathname]);
+  // Auto-close chatbot on page change
+  useEffect(() => {
+    setIsOpen(false);
+    setQuestion("");
+    setAnswer("");
+    setError("");
+  }, [location.pathname]);
 
   async function handleAsk() {
     if (!question.trim()) return;
@@ -33,16 +33,8 @@ useEffect(() => {
     setError("");
 
     try {
-      const res = await axios.post(
-        "http://127.0.0.1:8000/api/chat",
-        { question },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      // ✅ Use centralized API instance (has baseURL from env var + auto token)
+      const res = await API.post("/api/chat", { question });
 
       setAnswer(res.data.answer || "");
     } catch (err) {
@@ -58,21 +50,20 @@ useEffect(() => {
     }
   }
 
+  function handleToggle() {
+    setIsOpen((prev) => {
+      const next = !prev;
 
- function handleToggle() {
-  setIsOpen((prev) => {
-    const next = !prev;
+      // When closing → clear input & output
+      if (!next) {
+        setQuestion("");
+        setAnswer("");
+        setError("");
+      }
 
-    // When closing → clear input & output
-    if (!next) {
-      setQuestion("");
-      setAnswer("");
-      setError("");
-    }
-
-    return next;
-  });
-}
+      return next;
+    });
+  }
 
   return (
     <>

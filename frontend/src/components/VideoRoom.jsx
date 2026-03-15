@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ZegoUIKitPrebuilt } from "@zegocloud/zego-uikit-prebuilt";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import API from "../api/api";
 
 const APP_ID = Number(import.meta.env.VITE_ZEGOCLOUD_APP_ID);
 const SERVER_SECRET = import.meta.env.VITE_ZEGOCLOUD_SERVER_SECRET;
-const API = "http://127.0.0.1:8000";
 
 export default function VideoRoom({ roomId, userId, userName, userRole }) {
   const containerRef = useRef(null);
@@ -227,29 +226,31 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
      TEACHER TOGGLES
      ======================= */
   const toggleMuteStudents = async () => {
-    const token = localStorage.getItem("token");
     const endpoint = muteStudents ? "unmute" : "mute";
 
-    await axios.post(
-      `${API}/api/engagement/sessions/${roomId}/${endpoint}`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    setMuteStudents(!muteStudents);
+    try {
+      await API.post(
+        `/api/engagement/sessions/${roomId}/${endpoint}`,
+        {}
+      );
+      setMuteStudents(!muteStudents);
+    } catch (err) {
+      console.error("❌ Toggle mute error:", err);
+    }
   };
 
   const toggleCameraStudents = async () => {
-    const token = localStorage.getItem("token");
     const endpoint = disableCameras ? "enable-cameras" : "disable-cameras";
 
-    await axios.post(
-      `${API}/api/engagement/sessions/${roomId}/${endpoint}`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    setDisableCameras(!disableCameras);
+    try {
+      await API.post(
+        `/api/engagement/sessions/${roomId}/${endpoint}`,
+        {}
+      );
+      setDisableCameras(!disableCameras);
+    } catch (err) {
+      console.error("❌ Toggle camera error:", err);
+    }
   };
 
   /* =======================
@@ -261,25 +262,20 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
 
     setMlStatus("starting");
 
-    const token = localStorage.getItem("token");
-    const headers = { headers: { Authorization: `Bearer ${token}` } };
-
     try {
       // Ensure attendance
-      await axios.post(
-        `${API}/api/attendance/join/${roomId}`,
-        {},
-        headers
+      await API.post(
+        `/api/attendance/join/${roomId}`,
+        {}
       );
 
       // Wait for DB commit
       await new Promise(r => setTimeout(r, 1000));
 
       // Start ML
-      await axios.post(
-        `${API}/api/engagement/start-ml?session_id=${roomId}`,
-        {},
-        headers
+      await API.post(
+        `/api/engagement/start-ml?session_id=${roomId}`,
+        {}
       );
 
       console.log("✅ ML started");
@@ -330,16 +326,10 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
 
       console.log("🛑 Teacher ending session:", roomId);
 
-      const res = await axios.post(
-        `${API}/api/engagement/sessions/${roomId}/end`,
+      const res = await API.post(
+        `/api/engagement/sessions/${roomId}/end`,
         {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          timeout: 5000,
-        }
+        { timeout: 5000 }
       );
 
       console.log("✅ Session ended:", res.data);
@@ -361,14 +351,12 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
      ✅ HEARTBEAT
      ======================= */
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token || !roomId) return;
+    if (!roomId) return;
 
     const interval = setInterval(() => {
-      axios.post(
-        `${API}/api/engagement/sessions/${roomId}/heartbeat`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
+      API.post(
+        `/api/engagement/sessions/${roomId}/heartbeat`,
+        {}
       )
         .then(() => {
           console.log("💓 Heartbeat sent");
@@ -396,11 +384,9 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
 
       // Stop ML for students
       if (userRole === "audience") {
-        const token = localStorage.getItem("token");
-        axios.post(
-          `${API}/api/engagement/stop-ml?session_id=${roomId}`,
-          {},
-          { headers: { Authorization: `Bearer ${token}` } }
+        API.post(
+          `/api/engagement/stop-ml?session_id=${roomId}`,
+          {}
         ).catch(err => console.warn("ML cleanup error:", err.message));
       }
     };
@@ -412,13 +398,10 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
   useEffect(() => {
     if (userRole !== "audience" || !zpRef.current) return;
 
-    const token = localStorage.getItem("token");
-
     const interval = setInterval(async () => {
       try {
-        const res = await axios.get(
-          `${API}/api/engagement/sessions/${roomId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+        const res = await API.get(
+          `/api/engagement/sessions/${roomId}`
         );
 
         res.data.mute_students
@@ -442,13 +425,10 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
   useEffect(() => {
     if (userRole !== "host") return;
 
-    const token = localStorage.getItem("token");
-
     const sync = async () => {
       try {
-        const res = await axios.get(
-          `${API}/api/engagement/sessions/${roomId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+        const res = await API.get(
+          `/api/engagement/sessions/${roomId}`
         );
 
         setMuteStudents(res.data.mute_students);
@@ -468,15 +448,12 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
      ======================= */
   useEffect(() => {
     if (sessionEnded) return;
-
-    const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!roomId) return;
 
     const interval = setInterval(async () => {
       try {
-        const res = await axios.get(
-          `${API}/api/engagement/sessions/${roomId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+        const res = await API.get(
+          `/api/engagement/sessions/${roomId}`
         );
 
         if (res.data.ended_at) {

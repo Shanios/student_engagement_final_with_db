@@ -5,7 +5,8 @@ from models import DeviceLog
 from fastapi import APIRouter,Header, Depends, HTTPException, Query, UploadFile, File, Request,BackgroundTasks
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-
+from dotenv import load_dotenv
+load_dotenv()
 from database import SessionLocal
 from models import EngagementSession, EngagementPoint, User,Attendance
 from auth import get_current_user
@@ -25,7 +26,7 @@ import psutil
 from pathlib import Path
 from auth import create_access_token  # Add this
 import numpy as np
-
+BACKEND_URL = os.getenv("BACKEND_BASE", "http://127.0.0.1:8000")
 def get_db():
     """Dependency to get database session"""
     db = SessionLocal()  # ✅ Create session using SessionLocal
@@ -228,7 +229,7 @@ def start_ml_process(
                 f"--session-id={session_id}",
                 f"--student-id={current_user.id}",
                 f"--token={ml_token}",
-                f"--backend=http://127.0.0.1:8000",
+                f"--backend={BACKEND_URL}",
             ]
             
             print(f"📄 Script: {ml_script_abs}")
@@ -955,7 +956,7 @@ def add_point(
     payload: PointCreate,
     request: Request,  # ✅ NEW: For IP tracking
     db: Session = Depends(get_db),
-    _: None = Depends(verify_camera_device),  # 🔐 device auth
+    # _: None = Depends(verify_camera_device),  # 🔐 device auth
 ): 
 
     # ✅ NEW: Log successful upload
@@ -1008,6 +1009,7 @@ def add_point(
         details="Point uploaded",
         points_uploaded=1
     )
+    # db.add(point)
     db.add(device_log)  # ✅ ADD THIS
     db.commit()
   

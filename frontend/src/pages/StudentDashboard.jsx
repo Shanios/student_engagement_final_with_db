@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import API from "../api/api";
 import RealTimeEngagement from "./RealTimeEngagement";
 import SessionAnalytics from "../components/SessionAnalytics";
 import "../styles/global.css";
@@ -44,10 +44,9 @@ export default function StudentDashboard() {
       console.log("📝 Joining session with code:", shareCode);
 
       // ✅ CRITICAL: Call backend join endpoint
-      const res = await axios.post(
-        "http://127.0.0.1:8000/api/engagement/sessions/join",
-        { share_code: shareCode.trim() },
-        { headers: { Authorization: `Bearer ${token}` } }
+      const res = await API.post(
+        "/api/engagement/sessions/join",
+        { share_code: shareCode.trim() }
       );
 
       console.log("✅ Join response:", res.data);
@@ -222,12 +221,12 @@ export default function StudentDashboard() {
                 <strong>Subject:</strong> {sessionInfo.subject}
               </p>
             )}
-<p style={{ margin: "0 0 12px 0", color: "#d1fae5" }}>
-  <strong>Started:</strong>{" "}
-  {sessionInfo.started_at
-    ? new Date(sessionInfo.started_at + "Z").toLocaleTimeString()
-    : "-"}
-</p>
+            <p style={{ margin: "0 0 12px 0", color: "#d1fae5" }}>
+              <strong>Started:</strong>{" "}
+             {sessionInfo.started_at
+  ? new Date(sessionInfo.started_at).toLocaleTimeString()
+  : "-"}
+            </p>
 
             {/* ✅ NEW: Action buttons */}
             <div style={{ display: "flex", gap: "10px" }}>

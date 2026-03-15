@@ -1,10 +1,51 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import API from "../api/api";
 import { Download, Mail, Share2, Loader, ArrowLeft, TrendingUp, Zap, Target, Activity } from 'lucide-react';
-import './SessionReport.css';
+import './SessionReport-Hybrid.css';
 
-const API = 'http://127.0.0.1:8000';
+// ============================================================================
+// ✅ ENGAGEMENT STATE GRADING FUNCTION (OPTIMIZED)
+// ============================================================================
+
+const getEngagementState = (score = 0) => {
+  const s = Math.max(0, Math.min(1, score));
+  
+  if (s >= 0.75) {
+    return { 
+      state: 'Attentive', 
+      color: '#10b981',
+      icon: '👁️',
+      description: 'Highly Engaged'
+    };
+  }
+  if (s >= 0.55) {
+    return { 
+      state: 'Moderately Engaged', 
+      color: '#3b82f6',
+      icon: '👀',
+      description: 'On Track'
+    };
+  }
+  if (s >= 0.35) {
+    return { 
+      state: 'Less Engaged', 
+      color: '#f59e0b',
+      icon: '😐',
+      description: 'Needs Attention'
+    };
+  }
+  return { 
+    state: 'Sleepy / Disengaged', 
+    color: '#ef4444',
+    icon: '😴',
+    description: 'Critical'
+  };
+};
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
 export default function SessionReportDashboard() {
   const { sessionId } = useParams();
@@ -13,9 +54,9 @@ export default function SessionReportDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sending, setSending] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+
   useEffect(() => {
     fetchReport();
   }, [sessionId]);
@@ -23,10 +64,8 @@ export default function SessionReportDashboard() {
   const fetchReport = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${API}/api/engagement/sessions/${sessionId}/report`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await API.get(
+        `/api/engagement/sessions/${sessionId}/report`
       );
       setReport(response.data);
       setError(null);
@@ -38,111 +77,68 @@ export default function SessionReportDashboard() {
     }
   };
 
-const downloadExcel = async () => {
-  try {
-    setSending(true);
-    const token = localStorage.getItem('token');
-    
-    console.log("🔍 DEBUG - Download CSV:");
-    console.log("- Session ID:", sessionId);
-    console.log("- Token exists:", !!token);
-    console.log("- Endpoint:", `${API}/api/attendance/session/${sessionId}/download`);
-    
-    const response = await axios.get(
-      `${API}/api/attendance/session/${sessionId}/download`,
-      { 
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }, 
-        responseType: 'blob' 
-      }
-    );
-    
-    console.log("✅ Download response:", response.status, response.headers);
-    
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `session_${sessionId}_attendance.csv`);
-    document.body.appendChild(link);
-    link.click();
-    link.parentElement.removeChild(link);
-    window.URL.revokeObjectURL(url);
-    
-    console.log('✅ CSV downloaded successfully');
-    alert('✅ Attendance CSV downloaded!');
-    
-  } catch (err) {
-    console.error('❌ Download failed:', err);
-    
-    // Detailed error logging
-    if (err.response) {
-      console.log("📡 Response status:", err.response.status);
-      console.log("📡 Response data:", err.response.data);
-      console.log("📡 Response headers:", err.response.headers);
-    }
-    
-    alert(`❌ Failed to download: ${err.message}`);
-  } finally {
-    setSending(false);
-  }
-};
+  const downloadExcel = async () => {
+    try {
+      setSending(true);
 
-const sendViaEmail = async () => {
-  try {
-    setSending(true);
-    const token = localStorage.getItem('token');
-    
-    console.log("📧 DEBUG - Send Email:");
-    console.log("- Session ID:", sessionId);
-    console.log("- Token exists:", !!token);
-    console.log("- Endpoint:", `${API}/api/attendance/session/${sessionId}/send-email`);
-    
-    const response = await axios.post(
-      `${API}/api/attendance/session/${sessionId}/send-email`,
-      {},
-      { 
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        } 
-      }
-    );
+      const response = await API.get(
+        `/api/attendance/session/${sessionId}/download`,
+        {
+          responseType: 'blob'
+        }
+      );
 
-    console.log('✅ Email response:', response.data);
-    alert('✅ Engagement report sent to your email!');
-    
-  } catch (err) {
-    console.error('❌ Email send failed:', err);
-    
-    // Detailed error logging
-    if (err.response) {
-      console.log("📡 Response status:", err.response.status);
-      console.log("📡 Response data:", err.response.data);
-      console.log("📡 Response headers:", err.response.headers);
-    } else if (err.request) {
-      console.log("📡 No response received:", err.request);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `session_${sessionId}_attendance.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentElement.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 3000);
+    } catch (err) {
+      console.error('❌ Download failed:', err);
+      alert(`❌ Failed to download: ${err.message}`);
+    } finally {
+      setSending(false);
     }
-    
-    let errorMessage = 'Failed to send email';
-    if (err.response?.status === 404) {
-      errorMessage = 'Email endpoint not found (404). Check backend routes.';
-    } else if (err.response?.status === 403) {
-      errorMessage = 'Permission denied (403).';
-    } else if (err.response?.status === 500) {
-      errorMessage = 'Server error (500). Check backend logs.';
-    } else if (err.code === 'ERR_NETWORK') {
-      errorMessage = 'Network error. Check if backend is running.';
-    } else if (err.response?.data?.detail) {
-      errorMessage = err.response.data.detail;
+  };
+
+  const sendViaEmail = async () => {
+    try {
+      setSending(true);
+
+      const response = await API.post(
+        `/api/attendance/session/${sessionId}/send-email`,
+        {}
+      );
+
+      setEmailSuccess(true);
+      setTimeout(() => setEmailSuccess(false), 3000);
+    } catch (err) {
+      console.error('❌ Email send failed:', err);
+
+      let errorMessage = 'Failed to send email';
+      if (err.response?.status === 404) {
+        errorMessage = 'Email endpoint not found (404). Check backend routes.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Permission denied (403).';
+      } else if (err.response?.status === 500) {
+        errorMessage = 'Server error (500). Check backend logs.';
+      } else if (err.code === 'ERR_NETWORK') {
+        errorMessage = 'Network error. Check if backend is running.';
+      } else if (err.response?.data?.detail) {
+        errorMessage = err.response.data.detail;
+      }
+
+      alert(`❌ ${errorMessage}`);
+    } finally {
+      setSending(false);
     }
-    
-    alert(`❌ ${errorMessage}`);
-  } finally {
-    setSending(false);
-  }
-};
+  };
 
   if (loading) {
     return (
@@ -197,19 +193,11 @@ const sendViaEmail = async () => {
     return '#ef4444';
   };
 
-  const getGrade = (score) => {
-    if (score >= 0.9) return { grade: 'A+', color: '#10b981' };
-    if (score >= 0.8) return { grade: 'A', color: '#10b981' };
-    if (score >= 0.7) return { grade: 'B', color: '#60a5fa' };
-    if (score >= 0.6) return { grade: 'C', color: '#f59e0b' };
-    return { grade: 'D', color: '#ef4444' };
-  };
-
-  const gradeInfo = getGrade(summary.avg_score || 0);
+  // ✅ FIXED: Use getEngagementState instead of getGrade
+  const gradeInfo = getEngagementState(summary.avg_score || 0);
 
   return (
     <div className="report-page">
-      {/* Animated Background */}
       <div className="report-bg">
         <div className="bg-orb bg-orb-1"></div>
         <div className="bg-orb bg-orb-2"></div>
@@ -218,16 +206,19 @@ const sendViaEmail = async () => {
       </div>
 
       <div className="report-content">
-        {/* Hero Header */}
         <div className="report-hero">
-          <button onClick={() => navigate('/teacher/sessions')} className="back-btn">
+          <button
+            onClick={() => navigate('/teacher/sessions')}
+            className="back-btn"
+            aria-label="Back to sessions list"
+          >
             <ArrowLeft size={18} />
             Back to Sessions
           </button>
 
           <div className="hero-content">
             <h1 className="hero-title">
-              <span className="title-icon">📊</span>
+              <span className="title-icon" aria-hidden="true">📊</span>
               Session Analytics Report
             </h1>
             <p className="hero-subtitle">
@@ -235,24 +226,30 @@ const sendViaEmail = async () => {
             </p>
           </div>
 
-          {/* Grade Badge */}
-          <div className="grade-badge" style={{ background: gradeInfo.color }}>
-            <div className="grade-letter">{gradeInfo.grade}</div>
-            <div className="grade-label">Overall<br/>Score</div>
+          {/* ✅ FIXED: Grade Badge now displays engagement state */}
+          <div
+            className="grade-badge"
+            style={{ background: gradeInfo.color }}
+            role="img"
+            aria-label={`Overall engagement: ${gradeInfo.state} - ${gradeInfo.description}`}
+          >
+            <div className="grade-letter">{gradeInfo.icon}</div>
+            <div className="grade-label">{gradeInfo.state}</div>
+            <div className="grade-sublabel">{gradeInfo.description}</div>
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div className="action-bar">
           <button
             onClick={downloadExcel}
             disabled={sending}
             className="action-btn download-btn"
-            title="Download attedance as excel"
+            title="Download attendance data as CSV"
+            aria-busy={sending}
           >
-            <Download size={20} />
-            <span>Download Excel</span>
-            {sending && <div className="btn-spinner"></div>}
+            <Download size={20} aria-hidden="true" />
+            <span>{downloadSuccess ? 'Downloaded!' : 'Download Excel'}</span>
+            {sending && <div className="btn-spinner" aria-hidden="true"></div>}
           </button>
 
           <button
@@ -260,88 +257,98 @@ const sendViaEmail = async () => {
             disabled={sending}
             className="action-btn email-btn"
             title="Send report via email"
+            aria-busy={sending}
           >
-            <Mail size={20} />
-            <span>Email Report</span>
-            {sending && <div className="btn-spinner"></div>}
+            <Mail size={20} aria-hidden="true" />
+            <span>{emailSuccess ? 'Sent!' : 'Email Report'}</span>
+            {sending && <div className="btn-spinner" aria-hidden="true"></div>}
           </button>
-
-          {/* <button
-            onClick={() => {
-              navigator.clipboard.writeText(sessionId);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-            }}
-            className="action-btn share-btn"
-            title="Copy session ID"
-          >
-            <Share2 size={20} />
-            <span>{copied ? 'Copied!' : 'Share ID'}</span>
-          </button> */}
         </div>
 
-        {/* Key Metrics - Premium Cards */}
         <div className="metrics-grid">
-          {/* Average Engagement */}
           <div className="metric-card engagement-card">
             <div className="metric-header">
               <h3>Average Engagement</h3>
-              <Activity size={24} />
+              <Activity size={24} aria-hidden="true" />
             </div>
             <div className="metric-value">
               {(summary.avg_score * 100).toFixed(1)}%
             </div>
-            <div className="metric-bar">
-              <div className="bar-fill" style={{
-                width: `${summary.avg_score * 100}%`,
-                background: getEngagementColor(summary.avg_score)
-              }}></div>
+            <div
+              className="metric-bar"
+              role="progressbar"
+              aria-valuenow={(summary.avg_score * 100).toFixed(1)}
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              <div
+                className="bar-fill"
+                style={{
+                  width: `${summary.avg_score * 100}%`,
+                  background: getEngagementColor(summary.avg_score)
+                }}
+              ></div>
             </div>
             <p className="metric-label">Overall classroom engagement level</p>
           </div>
 
-          {/* Attention Score */}
           <div className="metric-card attention-card">
             <div className="metric-header">
               <h3>Attention Score</h3>
-              <Target size={24} />
+              <Target size={24} aria-hidden="true" />
             </div>
             <div className="metric-value">
               {summary.attention_score || 0}
               <span className="metric-suffix">/100</span>
             </div>
-            <div className="metric-bar">
-              <div className="bar-fill" style={{
-                width: `${(summary.attention_score || 0)}%`,
-                background: '#a855f7'
-              }}></div>
+            <div
+              className="metric-bar"
+              role="progressbar"
+              aria-valuenow={summary.attention_score || 0}
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              <div
+                className="bar-fill"
+                style={{
+                  width: `${(summary.attention_score || 0)}%`,
+                  background: '#a855f7'
+                }}
+              ></div>
             </div>
             <p className="metric-label">Student focus and concentration</p>
           </div>
 
-          {/* Focus Time */}
           <div className="metric-card focus-card">
             <div className="metric-header">
               <h3>Focus Time</h3>
-              <Zap size={24} />
+              <Zap size={24} aria-hidden="true" />
             </div>
             <div className="metric-value">
               {(summary.focus_time_percentage || 0).toFixed(1)}%
             </div>
-            <div className="metric-bar">
-              <div className="bar-fill" style={{
-                width: `${summary.focus_time_percentage || 0}%`,
-                background: '#10b981'
-              }}></div>
+            <div
+              className="metric-bar"
+              role="progressbar"
+              aria-valuenow={(summary.focus_time_percentage || 0).toFixed(1)}
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              <div
+                className="bar-fill"
+                style={{
+                  width: `${summary.focus_time_percentage || 0}%`,
+                  background: '#10b981'
+                }}
+              ></div>
             </div>
             <p className="metric-label">Time spent actively engaged</p>
           </div>
 
-          {/* Duration */}
           <div className="metric-card duration-card">
             <div className="metric-header">
               <h3>Session Duration</h3>
-              <TrendingUp size={24} />
+              <TrendingUp size={24} aria-hidden="true" />
             </div>
             <div className="metric-value">
               {summary.duration_formatted || '0:00'}
@@ -353,16 +360,18 @@ const sendViaEmail = async () => {
           </div>
         </div>
 
-        {/* Graphs Section */}
         <div className="graphs-section">
-          <h2 className="section-title">📈 Visual Analytics</h2>
+          <h2 className="section-title">
+            <span aria-hidden="true">📈</span>
+            Visual Analytics
+          </h2>
           <div className="graphs-grid">
             {report.graphs?.engagement_timeline && (
               <div className="graph-card timeline-card">
                 <h3>Engagement Timeline</h3>
                 <img
                   src={`data:image/png;base64,${report.graphs.engagement_timeline}`}
-                  alt="Engagement Timeline"
+                  alt="Engagement timeline chart showing student focus over the session duration"
                   className="graph-image"
                 />
               </div>
@@ -373,7 +382,7 @@ const sendViaEmail = async () => {
                 <h3>Engagement Distribution</h3>
                 <img
                   src={`data:image/png;base64,${report.graphs.distribution_chart}`}
-                  alt="Distribution Chart"
+                  alt="Distribution chart showing percentage of students in high, medium, and low engagement levels"
                   className="graph-image"
                 />
               </div>
@@ -381,10 +390,8 @@ const sendViaEmail = async () => {
           </div>
         </div>
 
-        {/* Detailed Analytics */}
         <div className="analytics-section">
           <div className="analytics-grid">
-            {/* Engagement Breakdown */}
             <div className="analytics-card">
               <h3>🎯 Engagement Breakdown</h3>
               <div className="breakdown-list">
@@ -395,11 +402,20 @@ const sendViaEmail = async () => {
                       {(distribution.high_engagement * 100).toFixed(1)}%
                     </span>
                   </div>
-                  <div className="breakdown-bar">
-                    <div className="bar-fill" style={{
-                      width: `${distribution.high_engagement * 100}%`,
-                      background: 'linear-gradient(90deg, #10b981, #34d399)'
-                    }}></div>
+                  <div
+                    className="breakdown-bar"
+                    role="progressbar"
+                    aria-valuenow={(distribution.high_engagement * 100).toFixed(1)}
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  >
+                    <div
+                      className="bar-fill"
+                      style={{
+                        width: `${distribution.high_engagement * 100}%`,
+                        background: 'linear-gradient(90deg, #10b981, #34d399)'
+                      }}
+                    ></div>
                   </div>
                 </div>
 
@@ -410,11 +426,20 @@ const sendViaEmail = async () => {
                       {(distribution.medium_engagement * 100).toFixed(1)}%
                     </span>
                   </div>
-                  <div className="breakdown-bar">
-                    <div className="bar-fill" style={{
-                      width: `${distribution.medium_engagement * 100}%`,
-                      background: 'linear-gradient(90deg, #f59e0b, #fbbf24)'
-                    }}></div>
+                  <div
+                    className="breakdown-bar"
+                    role="progressbar"
+                    aria-valuenow={(distribution.medium_engagement * 100).toFixed(1)}
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  >
+                    <div
+                      className="bar-fill"
+                      style={{
+                        width: `${distribution.medium_engagement * 100}%`,
+                        background: 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+                      }}
+                    ></div>
                   </div>
                 </div>
 
@@ -425,23 +450,31 @@ const sendViaEmail = async () => {
                       {(distribution.low_engagement * 100).toFixed(1)}%
                     </span>
                   </div>
-                  <div className="breakdown-bar">
-                    <div className="bar-fill" style={{
-                      width: `${distribution.low_engagement * 100}%`,
-                      background: 'linear-gradient(90deg, #ef4444, #f87171)'
-                    }}></div>
+                  <div
+                    className="breakdown-bar"
+                    role="progressbar"
+                    aria-valuenow={(distribution.low_engagement * 100).toFixed(1)}
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  >
+                    <div
+                      className="bar-fill"
+                      style={{
+                        width: `${distribution.low_engagement * 100}%`,
+                        background: 'linear-gradient(90deg, #ef4444, #f87171)'
+                      }}
+                    ></div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Critical Moments */}
             <div className="analytics-card critical-card">
               <h3>⚡ Critical Moments</h3>
               <div className="critical-list">
                 <div className="critical-item">
                   <div className="critical-icon" style={{ background: 'rgba(239, 68, 68, 0.1)' }}>
-                    <span>📉</span>
+                    <span aria-hidden="true">📉</span>
                   </div>
                   <div className="critical-info">
                     <span className="critical-label">Distraction Spikes</span>
@@ -451,7 +484,7 @@ const sendViaEmail = async () => {
 
                 <div className="critical-item">
                   <div className="critical-icon" style={{ background: 'rgba(245, 158, 11, 0.1)' }}>
-                    <span>⚠️</span>
+                    <span aria-hidden="true">⚠️</span>
                   </div>
                   <div className="critical-info">
                     <span className="critical-label">Engagement Dropoffs</span>
@@ -461,7 +494,7 @@ const sendViaEmail = async () => {
 
                 <div className="critical-item">
                   <div className="critical-icon" style={{ background: 'rgba(16, 185, 129, 0.1)' }}>
-                    <span>📈</span>
+                    <span aria-hidden="true">📈</span>
                   </div>
                   <div className="critical-info">
                     <span className="critical-label">Peak Periods</span>
@@ -473,12 +506,14 @@ const sendViaEmail = async () => {
           </div>
         </div>
 
-        {/* Performance Summary */}
         <div className="performance-section">
-          <h2 className="section-title">🏆 Performance Summary</h2>
+          <h2 className="section-title">
+            <span aria-hidden="true">🏆</span>
+            Performance Summary
+          </h2>
           <div className="performance-grid">
             <div className="performance-card peak">
-              <div className="perf-icon">🔥</div>
+              <div className="perf-icon" aria-hidden="true">🔥</div>
               <div className="perf-content">
                 <p className="perf-label">Peak Engagement</p>
                 <p className="perf-value" style={{ color: '#10b981' }}>
@@ -488,7 +523,7 @@ const sendViaEmail = async () => {
             </div>
 
             <div className="performance-card lowest">
-              <div className="perf-icon">❄️</div>
+              <div className="perf-icon" aria-hidden="true">❄️</div>
               <div className="perf-content">
                 <p className="perf-label">Lowest Engagement</p>
                 <p className="perf-value" style={{ color: '#ef4444' }}>
@@ -498,7 +533,7 @@ const sendViaEmail = async () => {
             </div>
 
             <div className="performance-card volatility">
-              <div className="perf-icon">📊</div>
+              <div className="perf-icon" aria-hidden="true">📊</div>
               <div className="perf-content">
                 <p className="perf-label">Data Volatility</p>
                 <p className="perf-value" style={{ color: '#9333ea' }}>
@@ -508,12 +543,20 @@ const sendViaEmail = async () => {
             </div>
 
             <div className="performance-card stability">
-              <div className="perf-icon">✨</div>
+              <div className="perf-icon" aria-hidden="true">✨</div>
               <div className="perf-content">
                 <p className="perf-label">Data Stability</p>
-                <p className="perf-value" style={{
-                  color: summary.volatility <= 0.2 ? '#10b981' : summary.volatility <= 0.5 ? '#f59e0b' : '#ef4444'
-                }}>
+                <p
+                  className="perf-value"
+                  style={{
+                    color:
+                      summary.volatility <= 0.2
+                        ? '#10b981'
+                        : summary.volatility <= 0.5
+                          ? '#f59e0b'
+                          : '#ef4444'
+                  }}
+                >
                   {summary.volatility <= 0.2 ? 'Excellent' : summary.volatility <= 0.5 ? 'Good' : 'Fair'}
                 </p>
               </div>
@@ -521,24 +564,23 @@ const sendViaEmail = async () => {
           </div>
         </div>
 
-        {/* Footer Info */}
         <div className="report-footer">
           <div className="footer-info">
-            <p>Session ID: <code>{sessionId}</code></p>
+            <p>
+              Session ID: <code>{sessionId}</code>
+            </p>
             <p>
               Session Date:{" "}
               {report.started_at
                 ? new Date(report.started_at).toLocaleString()
                 : "-"}
             </p>
-            {/* <p>
-              Report Generated:{" "}
-              {report.generated_at
-                ? new Date(report.generated_at).toLocaleString()
-                : "-"}
-            </p> */}
           </div>
-          <button onClick={() => navigate('/teacher/sessions')} className="btn btn-secondary">
+          <button
+            onClick={() => navigate('/teacher/sessions')}
+            className="btn btn-secondary"
+            aria-label="View all sessions"
+          >
             View All Sessions
           </button>
         </div>

@@ -1,0 +1,19 @@
+# ML Client Requirements (Local Machine Only)
+# Used for realtime engagement detection script
+# NOT deployed to Railway - students install locally only
+ 
+# ========== Computer Vision ==========
+opencv-python==4.12.0.88
+opencv-contrib-python==4.12.0.88
+mediapipe==0.10.14
+ 
+# ========== Core Mathematics ==========
+numpy==2.2.6
+ 
+# ========== Machine Learning ==========
+scikit-learn==1.7.2
+joblib==1.5.2
+ 
+# ========== API Communication ==========
+requests==2.32.5
+python-dotenv==1.2.1

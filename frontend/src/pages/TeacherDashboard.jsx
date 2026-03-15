@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import API from "../api/api";
 import RealTimeEngagement from "./RealTimeEngagement";
 import SessionAnalytics from "../components/SessionAnalytics";
 import "../styles/global.css";
 import { useNavigate } from "react-router-dom";
-
-const API = "http://127.0.0.1:8000";
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
@@ -36,7 +34,7 @@ export default function TeacherDashboard() {
 
     const interval = setInterval(() => {
       if (sessionInfo?.started_at) {
-        const startTime = new Date(sessionInfo.started_at ).getTime();
+        const startTime = new Date(sessionInfo.started_at).getTime();
         const now = new Date().getTime();
         const elapsed = Math.floor((now - startTime) / 1000);
 
@@ -68,11 +66,9 @@ export default function TeacherDashboard() {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem("token");
-      const res = await axios.post(
-        `${API}/api/engagement/sessions`,
-        { title: "Live Class Session", subject: "General" },
-        { headers: { Authorization: `Bearer ${token}` } }
+      const res = await API.post(
+        "/api/engagement/sessions",
+        { title: "Live Class Session", subject: "General" }
       );
 
       console.log("🎓 Session started:", res.data.id);
@@ -110,16 +106,10 @@ export default function TeacherDashboard() {
 
       console.log("🛑 Sending end session request for:", sessionId);
 
-      const res = await axios.post(
-        `${API}/api/engagement/sessions/${sessionId}/end`,
+      const res = await API.post(
+        `/api/engagement/sessions/${sessionId}/end`,
         {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          timeout: 5000,
-        }
+        { timeout: 5000 }
       );
 
       console.log("✅ Session end response:", res.data);
@@ -165,10 +155,9 @@ export default function TeacherDashboard() {
     try {
       const url = roomLocked ? "unlock" : "lock";
 
-      await axios.post(
-        `${API}/api/engagement/sessions/${sessionId}/${url}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
+      await API.post(
+        `/api/engagement/sessions/${sessionId}/${url}`,
+        {}
       );
 
       setRoomLocked(!roomLocked);
@@ -186,10 +175,9 @@ export default function TeacherDashboard() {
     if (!token || !sessionId) return;
 
     try {
-      await axios.post(
-        `${API}/api/engagement/sessions/${sessionId}/mute`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
+      await API.post(
+        `/api/engagement/sessions/${sessionId}/mute`,
+        {}
       );
       setStudentsMuted(true);
     } catch (err) {
@@ -206,10 +194,9 @@ export default function TeacherDashboard() {
     if (!token || !sessionId) return;
 
     try {
-      await axios.post(
-        `${API}/api/engagement/sessions/${sessionId}/disable-cameras`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
+      await API.post(
+        `/api/engagement/sessions/${sessionId}/disable-cameras`,
+        {}
       );
       setCamerasDisabled(true);
     } catch (err) {
@@ -243,10 +230,12 @@ export default function TeacherDashboard() {
     if (!sessionId || ended) return;
 
     const token = localStorage.getItem("token");
+    const API_BASE = import.meta.env.VITE_API_BASE;
+    
     const interval = setInterval(async () => {
       try {
         const res = await fetch(
-          `${API}/api/engagement/sessions/${sessionId}/heartbeat`,
+          `${API_BASE}/api/engagement/sessions/${sessionId}/heartbeat`,
           {
             method: "POST",
             headers: { Authorization: `Bearer ${token}` },
@@ -279,9 +268,8 @@ export default function TeacherDashboard() {
 
     const interval = setInterval(async () => {
       try {
-        const res = await axios.get(
-          `${API}/api/attendance/count/${sessionId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+        const res = await API.get(
+          `/api/attendance/count/${sessionId}`
         );
 
         setAttendanceCount(res.data.count);
@@ -455,30 +443,6 @@ export default function TeacherDashboard() {
                   }}
                 >
                   {roomLocked ? "🔓 Unlock Class" : "🔒 Lock Class"}
-                </button>
-
-                <button
-                  onClick={muteStudents}
-                  disabled={studentsMuted}
-                  className="btn btn-secondary"
-                  style={{
-                    background: studentsMuted ? "#6b7280" : "#3b82f6",
-                    opacity: studentsMuted ? 0.6 : 1,
-                  }}
-                >
-                  🔇 Mute Students
-                </button>
-
-                <button
-                  onClick={disableStudentCameras}
-                  disabled={camerasDisabled}
-                  className="btn btn-secondary"
-                  style={{
-                    background: camerasDisabled ? "#6b7280" : "#3b82f6",
-                    opacity: camerasDisabled ? 0.6 : 1,
-                  }}
-                >
-                  📷 Disable Cameras
                 </button>
               </div>
             )}

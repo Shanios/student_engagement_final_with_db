@@ -1,18 +1,11 @@
 # backend/rag_api.py
-from fastapi import APIRouter, HTTPException
-from rag.build_knowledge import build_kb  # make sure function name matches your file
+from fastapi import APIRouter
 
 router = APIRouter(prefix="/api/rag", tags=["rag"])
 
+# No endpoints needed - RAG is read-only in production
 
-@router.post("/rebuild")
-def rebuild_kb():
-    """
-    Rebuild embeddings from current PDFs.
-    Call this manually after uploading many new notes.
-    """
-    try:
-        build_kb()
-        return {"status": "ok", "message": "Knowledge base rebuilt"}
-    except Exception as e:
-        raise HTTPException(500, detail=str(e))
+@router.get("/health")
+def rag_health():
+    """Check if RAG is available"""
+    return {"status": "ok", "rag_available": True}

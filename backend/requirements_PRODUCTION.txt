@@ -1,0 +1,66 @@
+
+
+# Production Requirements for Railway Backend
+# ✅ OPTIMIZED: Camera packages (cv2, mediapipe) REMOVED
+# ✅ KEPT: All ML, RAG, backend packages
+
+# ========== FastAPI & Web Server ==========
+fastapi==0.124.0
+uvicorn==0.38.0
+python-multipart==0.0.20
+httpx==0.28.1
+starlette==0.50.0
+
+# ========== Database ==========
+SQLAlchemy==2.0.44
+psycopg2-binary==2.9.11
+
+# ========== Authentication & Security ==========
+python-jose==3.5.0
+passlib==1.7.4
+bcrypt==3.2.2
+python-dotenv==1.2.1
+email-validator==2.3.0
+
+# ========== Data Validation ==========
+pydantic==2.12.5
+pydantic-settings==2.12.0
+pydantic-extra-types==2.10.6
+
+# ========== CORS & Rate Limiting ==========
+slowapi==0.1.9
+
+# ========== File Handling ==========
+aiofiles==25.1.0
+pypdf==6.4.1
+Pillow==11.3.0
+
+# ========== HTTP & Utilities ==========
+requests==2.32.5
+python-dateutil==2.9.0.post0
+
+# ========== ML & DATA SCIENCE PACKAGES ==========
+# Numerical computing
+numpy==2.2.6
+
+
+# Machine Learning
+scikit-learn==1.7.2
+pandas==2.3.3
+
+# Model serialization
+joblib==1.5.2
+
+# ========== RAG CHATBOT PACKAGES ==========
+# Sentence embeddings for RAG
+sentence-transformers==5.1.2
+
+# Groq API client for LLM
+groq==0.37.1
+
+# ========== Monitoring & Logging ==========
+sentry-sdk==2.47.0
+
+# ========== Optional Utilities ==========
+orjson==3.11.5
+

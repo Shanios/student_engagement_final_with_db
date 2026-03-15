@@ -1,8 +1,9 @@
 import axios from "axios";
-import { getAuthToken, refreshAccessToken, clearAuth } from "./auth";
+import { getAuthToken, refreshAccessToken, clearAuth } from "../auth";
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 const API = axios.create({
-  baseURL: "http://127.0.0.1:8000",
+  baseURL: API_BASE,
 });
 
 // ✅ REQUEST INTERCEPTOR: Auto-attach token

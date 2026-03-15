@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { setTokens, setUser } from "../auth"; // ✅ Import centralized auth functions
-import API from "../api"; // ✅ Use configured Axios instance
+import API from "../api/api";
 
 // 🔹 Helper to decode JWT and read the payload (role, etc.)
 function parseJwt(token) {

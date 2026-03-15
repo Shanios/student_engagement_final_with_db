@@ -55,7 +55,9 @@ SESSION_ACTIVE = True
 parser = argparse.ArgumentParser(description="Real-time engagement ML model")
 parser.add_argument("--session-id", type=int, required=True, help="Engagement session ID")
 parser.add_argument("--student-id", type=int, required=False, help="Student ID (optional)")
-parser.add_argument("--backend", type=str, default="http://127.0.0.1:8000", help="Backend URL")
+# Get backend from env var, fall back to localhost for local testing
+default_backend = os.getenv("BACKEND_BASE", "http://127.0.0.1:8000")
+parser.add_argument("--backend", type=str, default=default_backend, help="Backend URL")
 parser.add_argument("--token", type=str, required=False, help="JWT authentication token")
 args = parser.parse_args()
 
@@ -372,12 +374,33 @@ def main():
                 print_log(f"❌ Camera {camera_id} not available")
         
         # Check if we got a working camera
-        if cap is None or not cap.isOpened():
-            print_log("❌ [5] No camera available")
-            close_debug_log()
-            sys.exit(1)
+            if cap is None or not cap.isOpened():
+             print_log("❌ [5] No camera available")
+             close_debug_log()
+             sys.exit(1)
         
-        print_log("🟢 [5] Camera opened successfully")
+            print_log("🟢 [5] Camera opened successfully")
+            ok, frame = cap.read()
+            if not ok:
+              print_log(f"❌ Frame read failed")
+              break
+
+# ✅ NEW: Validate frame is not corrupted
+            if frame is None or frame.size == 0:
+              print_log(f"⚠️  Empty frame received, skipping")
+              continue
+
+            if len(frame.shape) != 3:
+              print_log(f"⚠️  Invalid frame shape: {frame.shape}, skipping")
+              continue
+            h, w, c = frame.shape
+            if h < 100 or w < 100:
+                 print_log(f"⚠️  Frame too small: {w}x{h}, skipping")
+                 continue
+
+# ✅ Convert and process
+            frame = cv2.flip(frame, 1)
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         
     except Exception as e:
         print_log(f"❌ [5] Camera error: {e}")

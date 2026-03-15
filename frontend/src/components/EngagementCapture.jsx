@@ -4,7 +4,7 @@ import * as tf from "@tensorflow/tfjs-core";
 import "@tensorflow/tfjs-backend-webgl";
 import * as faceLandmarksDetection from "@tensorflow-models/face-landmarks-detection";
 import axios from "axios";
-
+import API from "../api/api";
 /*
   What this component does:
   - Accesses webcam
@@ -322,12 +322,9 @@ export default function EngagementCapture({
         user_id: userId,
         items: bufferRef.current.splice(0, bufferRef.current.length),
       };
-      try {
-        const token = localStorage.getItem("token");
-        await axios.post("/api/engagement/predict_batch", payload, {
-          baseURL: "http://127.0.0.1:8000",
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        });
+try {
+  // Token is auto-attached by API interceptor, no need to get it manually
+  await API.post("/api/engagement/predict_batch", payload);
       } catch (err) {
         console.error("send batch err", err);
         // on failure, re-insert items at head (simple retry)

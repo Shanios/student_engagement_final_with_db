@@ -35,7 +35,7 @@ app.state.limiter = limiter
 # ---- CORS (frontend dev: Vite on 5173) ----
 ALLOWED_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173"  # Default for local dev
+    "http://localhost:5173,http://127.0.0.1:5173,https://student-engagement-final-with-db.vercel.app"  # Default for local dev
 ).split(",")
 app.add_middleware(
     CORSMiddleware,

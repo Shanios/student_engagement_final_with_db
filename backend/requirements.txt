@@ -9,7 +9,7 @@ scipy
 # ========== Database ==========
 SQLAlchemy==2.0.44
 psycopg2-binary==2.9.11
-
+joblib
 # ========== Authentication & Security ==========
 python-jose==3.5.0
 passlib==1.7.4

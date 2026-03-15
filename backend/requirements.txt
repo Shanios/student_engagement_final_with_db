@@ -39,4 +39,4 @@ sentry-sdk==2.47.0
 numpy==2.2.6
 sentence-transformers==5.1.2
 # ========== Optional Utilities ==========
-orjson==3.11.5
+

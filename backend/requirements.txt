@@ -1,9 +1,4 @@
-
-
 # Production Requirements for Railway Backend
-# ✅ OPTIMIZED: Camera packages (cv2, mediapipe) REMOVED
-# ✅ KEPT: All ML, RAG, backend packages
-
 # ========== FastAPI & Web Server ==========
 fastapi==0.124.0
 uvicorn==0.38.0
@@ -39,28 +34,9 @@ Pillow==11.3.0
 requests==2.32.5
 python-dateutil==2.9.0.post0
 
-# ========== ML & DATA SCIENCE PACKAGES ==========
-# Numerical computing
-numpy==2.2.6
-
-
-# Machine Learning
-scikit-learn==1.7.2
-pandas==2.3.3
-
-# Model serialization
-joblib==1.5.2
-
-# ========== RAG CHATBOT PACKAGES ==========
-# Sentence embeddings for RAG
-sentence-transformers==5.1.2
-
-# Groq API client for LLM
-groq==0.37.1
-
 # ========== Monitoring & Logging ==========
 sentry-sdk==2.47.0
-
+numpy==2.2.6
+sentence-transformers==5.1.2
 # ========== Optional Utilities ==========
-orjson==3.11.5
 

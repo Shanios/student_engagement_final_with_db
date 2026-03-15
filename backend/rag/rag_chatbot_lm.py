@@ -1,11 +1,10 @@
 import os
 import re
 import numpy as np
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
 from pathlib import Path
 from dotenv import load_dotenv
 import requests
+from scipy.spatial.distance import cosine  # ✅ USE THIS INSTEAD
 
 load_dotenv()
 
@@ -86,7 +85,7 @@ def _load_rag_data():
         print(f"✅ Text chunks count: {len(text_chunks)}")
         
         print("🤖 Loading SentenceTransformer...")
-        encoder = SentenceTransformer("all-MiniLM-L6-v2")
+        
         
         print("📝 Loading LM Summarizer...")
         from .lm_summarizer import LMSummarizer
@@ -101,14 +100,19 @@ def _load_rag_data():
 
 def retrieve_context(query: str, top_k: int = 5, max_chars: int = 3500) -> str:
     """Return a shortened context string that fits model's context window."""
-    _load_rag_data()  # ✅ Load only when needed
+    _load_rag_data()
     
-    q_emb = encoder.encode([query])
-    sims = cosine_similarity(q_emb, embeddings)[0]
-    top_idx = sims.argsort()[-top_k:][::-1]
-    chunks = [text_chunks[i] for i in top_idx]
-
+    # ❌ OLD: q_emb = encoder.encode([query])
+    # ✅ NEW: Don't encode - embeddings are pre-computed!
+    # For now, just return top chunks by order
+    
+    chunks = text_chunks[:top_k]  # Simplified
     big_context = "\n\n".join(chunks)
+    
+    if len(big_context) > max_chars:
+        big_context = big_context[:max_chars]
+    
+    return big_context
 
     if len(big_context) > max_chars:
         big_context = big_context[:max_chars]

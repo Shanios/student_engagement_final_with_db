@@ -105,7 +105,7 @@ export default function SessionList() {
       const token = localStorage.getItem("token");
       
 const res = await API.post(
-  `/api/engagement/sessions/${sessionId}/email-report`
+  `/api/engagement/sessions/${sessionId}/send-email`
 );
 
       console.log("✅ Email sent:", res.data);

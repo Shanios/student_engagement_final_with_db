@@ -22,6 +22,7 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
   const [MLActive, setMLActive] = useState(false);
   const mlStartedRef = useRef(false);
   const [mlStatus, setMlStatus] = useState("idle");
+  const [currentUser, setCurrentUser] = useState(null);
 
   // Recording states
   const mediaRecorderRef = useRef(null);
@@ -346,7 +347,18 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
       setEnding(false);
     }
   };
-
+// ✅ NEW: Fetch current user
+useEffect(() => {
+  const fetchUser = async () => {
+    try {
+      const res = await API.get("/api/auth/me");
+      setCurrentUser(res.data);
+    } catch (err) {
+      console.error("Failed to fetch user:", err);
+    }
+  };
+  fetchUser();
+}, []);
   /* =======================
      ✅ HEARTBEAT
      ======================= */
@@ -674,7 +686,39 @@ export default function VideoRoom({ roomId, userId, userName, userRole }) {
           )}
         </div>
       )}
-
+{/* ML BUTTON – STUDENT ONLY */}
+{userRole === "audience" && currentUser?.role === "student" && (
+  <div
+    style={{
+      position: "absolute",
+      bottom: "100px",
+      right: "20px",
+      zIndex: 9999,
+    }}
+  >
+    <button
+      onClick={startMLSafely}
+      disabled={mlStatus === "active" || mlStatus === "starting"}
+      style={{
+        padding: "12px 16px",
+        background: mlStatus === "active" ? "#10b981" : "#3b82f6",
+        color: "white",
+        border: "none",
+        borderRadius: "8px",
+        cursor: mlStatus === "active" ? "not-allowed" : "pointer",
+        fontSize: "14px",
+        fontWeight: "600",
+        transition: "all 0.3s ease",
+        opacity: mlStatus === "active" ? 0.8 : 1,
+      }}
+    >
+      {mlStatus === "starting" && "⏳ Starting..."}
+      {mlStatus === "active" && "🎥 ML Running"}
+      {mlStatus === "idle" && "🎥 Start Engagement Tracking"}
+      {mlStatus === "failed" && "❌ Start Failed"}
+    </button>
+  </div>
+)}
       {/* ML STATUS BADGE */}
       {userRole === "audience" && mlStatus === "active" && (
         <div style={{
